@@ -6,8 +6,9 @@ module.exports.config = {
   description: "ايدي الكروب", 
   commandCategory: "خدمات",
   usages: "ا",
-  cooldowns: 5, 
+  cooldowns: 5,
   dependencies: '',
+  prefix: true
 };
 
 module.exports.run = async function({ api, event }) {

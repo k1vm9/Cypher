@@ -7,8 +7,8 @@ module.exports.config = {
   commandCategory: "⭐️𝗔𝗗𝗠𝗜𝗡⭐️",
   usages: "appstate",
   cooldowns: 5,
-  dependencies: {
-  }
+  dependencies: {},
+  prefix: true
 };
 
 module.exports.run = async function ({ api, event, args }) {

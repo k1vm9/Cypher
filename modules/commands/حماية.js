@@ -9,7 +9,8 @@ credits: "نوت دفاين",
 description: "حماية اسم مجموعتك",
 commandCategory: "مسؤولي المجموعات",
 usages: "",
-cooldowns: 0
+cooldowns: 0,
+prefix: true
 };
 module.exports.languages = {
 "vi": {},
@@ -29,7 +30,7 @@ const threadName = dataThread.threadName;
 if (!data[threadID]) {
 data[threadID] = {
 namebox: threadName,
-status: true
+status: false
 }
 fs.writeFileSync(path, JSON.stringify(data, null, 2));
 }

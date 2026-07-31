@@ -6,7 +6,8 @@ module.exports.config = {
   description: "عرض معلومات السيرفر",
   commandCategory: "النظام",
   usages: "ابتيم",
-  cooldowns: 3
+  cooldowns: 3,
+  prefix: true
 };
 
 module.exports.run = async function ({ api, event }) {

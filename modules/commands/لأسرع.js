@@ -6,7 +6,8 @@ module.exports.config = {
   description: "لعبة الاسرع ",
   usages: ["لعبة"],
   commandCategory: "العاب",
-  cooldowns: 0
+  cooldowns: 0,
+  prefix: true
 };
 
 const fs = require('fs');

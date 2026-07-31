@@ -6,7 +6,8 @@ module.exports.config = {
   description: "مادخلك",
   commandCategory: "المطور",
   usages: "uid",
-  cooldowns: 0
+  cooldowns: 0,
+  prefix: true
 };  
 
 

@@ -171,7 +171,7 @@ function onBot({ models }) {
       const adminBot = (global.config.ADMINBOT || [])[0];
       if (adminBot) {
         api.sendMessage(
-          '✅. تـم تـشـغـيـل سـيـكـو ☠️🩸',
+          '✅. تـم تـشـغـيـل سـايـفـر ☠️🩸',
           adminBot,
           (err) => {
             if (err) logger('فشل إرسال إشعار تشغيل البوت: ' + JSON.stringify(err), 'ERROR');
@@ -263,7 +263,9 @@ function onBot({ models }) {
 
           global.client.commands.set(cmd.config.name, cmd);
 
-        } catch (_) {}
+        } catch (loadErr) {
+          logger('Command load error [' + file + ']: ' + (loadErr?.message || loadErr), 'ERROR');
+        }
       }
     })();
 
@@ -464,7 +466,7 @@ const https   = require('https');
 const fs      = require('fs');
 const path    = require('path');
 const app     = express();
-const botURL  = 'https://bot-cww1.onrender.com';
+const botURL  = process.env.REPLIT_DEV_DOMAIN ? 'https://' + process.env.REPLIT_DEV_DOMAIN : null;
 
 /**
  * Pings the bot URL every 40 seconds to prevent Render.com from sleeping.
@@ -480,9 +482,11 @@ function pingUrl(url) {
     });
 }
 
-setInterval(() => {
-  pingUrl(botURL);
-}, 40 * 1000);
+if (botURL) {
+  setInterval(() => {
+    pingUrl(botURL);
+  }, 40 * 1000);
+}
 
 // Serve index.html for GET /
 app.get('/', (_req, res) => {
@@ -495,8 +499,10 @@ app.get('/', (_req, res) => {
   });
 });
 
-// Suppress unhandledRejection noise
-process.on('unhandledRejection', (_reason, _promise) => {});
+// Log unhandled rejections instead of silently swallowing them
+process.on('unhandledRejection', (reason, _promise) => {
+  logger('Unhandled Rejection: ' + (reason?.message || reason), 'WARN');
+});
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => {

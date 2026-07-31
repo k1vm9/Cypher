@@ -14,27 +14,32 @@ module.exports = function ({ api, models, Users, Threads, Currencies }) {
       
       var { body, senderID, threadID, messageID } = event;
   
+      if (!body || typeof body !== "string") return;
+  
       senderID = String(senderID);
       threadID = String(threadID);
 
-      // Global Lock Mode Check
-      if (global.lockAll) {
+      // Global Lock Mode Check (supports both global.lockAll and global.lockBot)
+      if (global.lockAll || global.lockBot) {
         if (!(ADMINBOT || []).includes(senderID)) return;
       }
+
       const threadSetting = threadData.get(threadID) || {};
       const prefix = threadSetting.hasOwnProperty("PREFIX") ? threadSetting.PREFIX : PREFIX;
       const prefixRegex = new RegExp(`^(<@!?${senderID}>|${escapeRegex(prefix)})\\s*`);
   
-      
       const [matchedPrefix] = body.match(prefixRegex) || [null];
       const args = matchedPrefix ? body.slice(matchedPrefix.length).trim().split(/ +/) : body.trim().split(/ +/);
       const commandName = args.shift().toLowerCase();
       var command = commands.get(commandName);
+
       if (YASSIN === "true" && !(ADMINBOT || []).includes(senderID)) return;
+
       if (!command) {
         var allCommandName = [];
         const commandValues = commands.keys();
         for (const cmd of commandValues) allCommandName.push(cmd);
+        if (allCommandName.length === 0) return;
         const checker = stringSimilarity.findBestMatch(commandName, allCommandName);
   
         if (checker.bestMatch.rating >= 0.8) {
@@ -43,8 +48,16 @@ module.exports = function ({ api, models, Users, Threads, Currencies }) {
           const closestMatch = checker.bestMatch.target;
           api.sendMessage(`ها ${commandName} ليس امر 🤷🏻‍♀️✘\nقصدك '${closestMatch}'?`, threadID, messageID);
           return;
+        } else {
+          return;
         }
       }
+
+      if (!command) return;
+
+      // Enforce prefix requirement: if command requires prefix and none was given, skip
+      if (command.config.prefix === true && !matchedPrefix) return;
+
       if (allowInbox === false && senderID == threadID) {
         if (!(ADMINBOT || []).includes(senderID)) {
           return; 
@@ -61,7 +74,7 @@ module.exports = function ({ api, models, Users, Threads, Currencies }) {
               threadID,
               async (err, info) => {
                 await new Promise((resolve) => setTimeout(resolve, 5 * 1000));
-                return api.unsendMessage(info.messageID);
+                if (info && info.messageID) api.unsendMessage(info.messageID);
               },
               messageID
             );
@@ -71,7 +84,7 @@ module.exports = function ({ api, models, Users, Threads, Currencies }) {
               threadID,
               async (err, info) => {
                 await new Promise((resolve) => setTimeout(resolve, 5 * 1000));
-                return api.unsendMessage(info.messageID);
+                if (info && info.messageID) api.unsendMessage(info.messageID);
               },
               messageID
             );
@@ -79,7 +92,9 @@ module.exports = function ({ api, models, Users, Threads, Currencies }) {
         }
       }
   
-      if (command.config.commandCategory.toLowerCase() == "nsfw" &&
+      // NSFW check — guard against undefined commandCategory
+      const category = (command.config.commandCategory || "").toLowerCase();
+      if (category === "nsfw" &&
         !global.data.threadAllowNSFW.includes(threadID) &&
         !(ADMINBOT || []).includes(senderID)) {
         return api.sendMessage(
@@ -87,7 +102,7 @@ module.exports = function ({ api, models, Users, Threads, Currencies }) {
           threadID,
           async (err, info) => {
             await new Promise((resolve) => setTimeout(resolve, 5 * 1000));
-            return api.unsendMessage(info.messageID);
+            if (info && info.messageID) api.unsendMessage(info.messageID);
           },
           messageID
         );
@@ -97,17 +112,20 @@ module.exports = function ({ api, models, Users, Threads, Currencies }) {
       if (event.isGroup) {
         try {
           threadInfo2 = threadInfo.get(threadID) || await Threads.getInfo(threadID);
-          if (Object.keys(threadInfo2).length == 0) throw new Error();
+          if (!threadInfo2 || Object.keys(threadInfo2).length == 0) throw new Error("empty thread info");
         } catch (err) {
           logger(global.getText("handleCommand", "cantGetInfoThread", "error"));
         }
       }
   
       var permssion = 0;
-      const threadInfoo = threadInfo.get(threadID) || await Threads.getInfo(threadID);
-      const find = (threadInfoo.adminIDs || []).find((el) => el.id == senderID);
-      if ((ADMINBOT || []).includes(senderID.toString())) permssion = 2;
-      else if (find) permssion = 1;
+      try {
+        const threadInfoo = threadInfo.get(threadID) || threadInfo2 || {};
+        const find = (threadInfoo.adminIDs || []).find((el) => el.id == senderID);
+        if ((ADMINBOT || []).includes(senderID.toString())) permssion = 2;
+        else if (find) permssion = 1;
+      } catch (_) {}
+
       if (command.config.hasPermssion > permssion) {
         return api.sendMessage(
           global.getText("handleCommand", "permssionNotEnough", command.config.name),
@@ -120,7 +138,7 @@ module.exports = function ({ api, models, Users, Threads, Currencies }) {
         global.client.cooldowns.set(command.config.name, new Map());
       }
       const timestamps = global.client.cooldowns.get(command.config.name);
-          const expirationTime = (command.config.cooldowns || 1) * 1000;
+      const expirationTime = (command.config.cooldowns || 1) * 1000;
       if (timestamps.has(senderID) && dateNow < timestamps.get(senderID) + expirationTime) {
         return api.setMessageReaction("⏳", event.messageID, (err) =>
           err ? logger("Đã có lỗi xảy ra khi thực thi setMessageReaction", 2) : "", true);
@@ -155,6 +173,7 @@ module.exports = function ({ api, models, Users, Threads, Currencies }) {
         }
         return;
       } catch (e) {
+        logger("Command error [" + commandName + "]: " + e.message, "ERROR");
         return api.sendMessage(global.getText("handleCommand", "commandError", commandName, e), threadID);
       }
     };

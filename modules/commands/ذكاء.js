@@ -9,7 +9,8 @@ module.exports.config = {
   cooldowns: 5,
   dependencies: {
       axios: ""
-  }
+  },
+  prefix: true
 };
 
 async function simsimi(a, b, c) {

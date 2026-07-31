@@ -45,13 +45,13 @@ app.listen(port);
 
 // ─── Animated banner (chalkercli rainbow) ────────────────────────────────────
 
-const rainbow = chalk.rainbow('\nㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤ《=== ✨ SAIKO BOT LAUNCH 🌟 ===》\n\n');
+const rainbow = chalk.rainbow('\nㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤ《=== ✨ CYPHER BOT LAUNCH 🌟 ===》\n\n');
 rainbow.stop();
 const frame = rainbow.frame();
 console.log(frame);
 
 logger(
-  chalk1.cyanBright('🎉 Your version is sparkling fresh!') + chalk1.yellow(' ✨'),
+  chalk1.cyanBright('🎉 Cypher is online and ready!') + chalk1.yellow(' ✨'),
   'UPDATE'
 );
 
@@ -112,7 +112,7 @@ axios.get('https://raw.githubusercontent.com/tandung1/Bot12/main/package.json').
 setTimeout(async function () {
 
   // Big ASCII title banner
-  CFonts.say('SAIKO', {
+  CFonts.say('CYPHER', {
     font:          'block',
     align:         'center',
     gradient:      ['cyan', 'purple'],
@@ -120,7 +120,7 @@ setTimeout(async function () {
     space:         false,
   });
 
-  CFonts.say('Bot Messenger Powered By SAIKO 🚀', {
+  CFonts.say('Bot Messenger Powered By Cypher 🚀', {
     font:               'console',
     align:              'center',
     gradient:           ['pink', 'IVAIZ'],
@@ -136,7 +136,7 @@ setTimeout(async function () {
 
   console.log(
     chalk1.bgMagentaBright.bold.blueBright(
-      '\n 🎉 SAIKO BOT READY AT ' + gio + ' 🎉 \n'
+      '\n 🎉 CYPHER BOT READY AT ' + gio + ' 🎉 \n'
     )
   );
 

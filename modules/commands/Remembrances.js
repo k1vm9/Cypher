@@ -7,6 +7,7 @@ module.exports.config = {
   commandCategory: "خدمات",
   usages: "ا",
   cooldowns: 1,
+  prefix: true
 };
 module.exports.handleEvent = function ({ api, event }) {
   const { commands } = global.client;

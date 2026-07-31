@@ -6,7 +6,8 @@ module.exports.config = {
   description: "Pinterest search",
   commandCategory: "tools",
   usages: "pin text - number",
-  cooldowns: 0
+  cooldowns: 0,
+  prefix: true
 };
 module.exports.run = async function({ api, event, args }) {
     const axios = require("axios");

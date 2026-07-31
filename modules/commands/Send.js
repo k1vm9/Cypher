@@ -6,7 +6,8 @@ module.exports.config = {
   description: "ارسال رسالة الى المستخدمين او الكروبات عن طريق حساب البوت",
   commandCategory: "المطور",
   usages: "للمستخدم/للكروب ID الرسالة",
-  cooldowns: 5
+  cooldowns: 5,
+  prefix: true
 };
 
 module.exports.run = async function ({ api, event, args }) {
