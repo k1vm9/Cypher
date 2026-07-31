@@ -1,10 +1,10 @@
 run = ["bash", "main.sh"]
 
 entrypoint = "main.sh"
-modules = ["nodejs-20", "web", "nix", "bash"]
+modules = ["nodejs-20"]
 
 [nix]
-channel = "stable-25_05"
+channel = "stable-22_11"
 
 [deployment]
 run = ["bash", "main.sh"]
