@@ -1,0 +1,3 @@
+- [Veil rebrand decisions](veil-rebrand.md) — complete rebrand from "DAVID V1" to "Veil" with new color system and SVG logo
+- [ZAO-CMDS migration](zao-migration.md) — how ZAO commands were ported into Veil and what shim layer bridges the two engines
+- [Dashboard bug fixes](dashboard-bugs.md) — all bugs found and fixed in the Veil dashboard panel (server.js + index.html)

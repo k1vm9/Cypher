@@ -1,0 +1,21 @@
+{
+  "name": "Veil Bot Dashboard",
+  "short_name": "Veil",
+  "description": "Veil — Facebook Messenger Bot Dashboard",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#140919",
+  "theme_color": "#D76960",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["utilities", "productivity"],
+  "lang": "ar",
+  "dir": "rtl"
+}
