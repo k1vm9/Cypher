@@ -7,13 +7,59 @@
   const loginForm = $("#loginForm");
   const loginError = $("#loginError");
   const toastRegion = $("#toastRegion");
-
   const icon = (name) => `<svg><use href="#i-${name}"></use></svg>`;
+
+  async function api(path, options = {}) {
+    const response = await fetch(path, {
+      headers: { "Content-Type": "application/json" },
+      ...options,
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "The request could not be completed.");
+    return data;
+  }
 
   function showApp() {
     loginGate.classList.add("is-hidden");
     appShell.classList.remove("is-hidden");
     document.body.classList.add("authenticated");
+    loadStatus();
+  }
+
+  function syncStatus(data) {
+    if (!data) return;
+    const status = data.status || "online";
+    const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+    $$(".connection-pill").forEach((pill) => {
+      const label = pill.querySelector("span:nth-child(2)");
+      const latency = pill.querySelector(".connection-label");
+      if (label) label.textContent = statusLabel;
+      if (latency) latency.textContent = status === "online" ? `· ${data.latency || 42}ms` : "· waiting";
+    });
+    $$(".profile-card .badge").forEach((badge) => {
+      badge.innerHTML = `<span class="status-dot ${status === "online" ? "online" : status === "connecting" ? "amber" : ""}"></span> ${statusLabel}`;
+      badge.className = `badge ${status === "online" ? "badge-success" : status === "connecting" ? "badge-warning" : "badge-red"}`;
+    });
+    $$(".profile-card .eyebrow .status-dot").forEach((dot) => {
+      dot.className = `status-dot ${status === "online" ? "online" : status === "connecting" ? "amber" : ""}`;
+    });
+    const stats = data.stats || {};
+    const statValues = [
+      stats.messages, stats.commands, stats.groups, Number(stats.users || 0).toLocaleString(),
+      stats.uptime, stats.totalCommands?.toLocaleString(), stats.protections, stats.ram,
+    ];
+    $$(".stat-card strong").forEach((value, index) => {
+      if (statValues[index] !== undefined) value.textContent = statValues[index];
+    });
+  }
+
+  async function loadStatus() {
+    try {
+      const data = await api("/api/status");
+      syncStatus(data);
+    } catch (error) {
+      toast(error.message, "error");
+    }
   }
 
   if (sessionStorage.getItem("cypher-auth") === "true") showApp();
@@ -51,14 +97,12 @@
   function activateTab(tab) {
     $$(".nav-item, .mobile-nav button").forEach((item) => item.classList.toggle("active", item.dataset.tab === tab));
     $$(".tab-panel").forEach((panel) => panel.classList.toggle("active", panel.dataset.panel === tab));
-    const activeNav = $(`.nav-item[data-tab="${tab}"]`);
-    activeNav?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    $(`.nav-item[data-tab="${tab}"]`)?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   $$("[data-tab]").forEach((element) => element.addEventListener("click", () => activateTab(element.dataset.tab)));
   $$("[data-tab-target]").forEach((element) => element.addEventListener("click", () => activateTab(element.dataset.tabTarget)));
-
   $("#navPrev").addEventListener("click", () => $("#featureNav").scrollBy({ left: -260, behavior: "smooth" }));
   $("#navNext").addEventListener("click", () => $("#featureNav").scrollBy({ left: 260, behavior: "smooth" }));
 
@@ -75,11 +119,63 @@
     setTimeout(() => item.remove(), 3200);
   }
 
-  $$("button.toggle").forEach((toggle) => toggle.addEventListener("click", (event) => {
+  async function runAction(button) {
+    const action = button.dataset.action;
+    const payload = { action };
+    if (action === "import") payload.payload = $("#cookieInput")?.value || "";
+    if (action === "admin" || action === "silent") {
+      payload.enabled = $(".toggle", button)?.classList.contains("active");
+    }
+    button.disabled = true;
+    try {
+      const data = await api("/api/actions", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      syncStatus(data.state);
+      const messages = {
+        restart: "Restart queued · bot will reconnect shortly",
+        stop: "Cypher is offline",
+        admin: "Admin-only mode updated",
+        silent: "Silent mode preference updated",
+        refresh: "Telemetry refreshed just now",
+        ping: `Ping complete · ${data.state?.latency || 42}ms round trip`,
+        import: "Session payload validated and ready",
+        "new-command": "Command editor is ready for a new command",
+        "add-thread": "Thread selector opened",
+        save: "Changes saved to the active instance",
+        "clear-logs": "Log stream cleared",
+        upload: "Choose a file to add to this instance",
+        reload: "Configuration reloaded",
+        "stop-all": "All automated jobs paused",
+        "save-message": "Automatic message schedule saved",
+      };
+      toast(messages[action] || "Action completed");
+      if (action === "upload") $("#fileInput")?.click();
+    } catch (error) {
+      toast(error.message, "error");
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  $$("[data-action]").forEach((button) => button.addEventListener("click", () => runAction(button)));
+
+  $$("button.toggle").forEach((toggle) => toggle.addEventListener("click", async (event) => {
     event.currentTarget.classList.toggle("active");
-    const state = event.currentTarget.classList.contains("active") ? "enabled" : "disabled";
     const label = event.currentTarget.getAttribute("aria-label") || "Setting";
-    toast(`${label.replace(/^Toggle /, "")} ${state}`);
+    const key = label.toLowerCase().includes("silent") ? "silent" : label.toLowerCase().includes("admin") ? "admin" : "save";
+    try {
+      const data = await api("/api/actions", {
+        method: "POST",
+        body: JSON.stringify({ action: key, enabled: event.currentTarget.classList.contains("active") }),
+      });
+      syncStatus(data.state);
+      toast(`${label.replace(/^Toggle /, "")} ${event.currentTarget.classList.contains("active") ? "enabled" : "disabled"}`);
+    } catch (error) {
+      event.currentTarget.classList.toggle("active");
+      toast(error.message, "error");
+    }
   }));
 
   $$(".filter-btn").forEach((button) => button.addEventListener("click", () => {
@@ -94,33 +190,10 @@
     toast(`${button.textContent} mode selected`);
   }));
 
-  $$("[data-action]").forEach((button) => button.addEventListener("click", () => {
-    const action = button.dataset.action;
-    const messages = {
-      restart: "Restart queued · bot will reconnect shortly",
-      stop: "Stop request sent to Cypher",
-      admin: "Admin-only mode updated",
-      silent: "Silent mode preference updated",
-      refresh: "Telemetry refreshed just now",
-      ping: "Ping complete · 42ms round trip",
-      import: "Session payload ready for validation",
-      "new-command": "Command editor is ready for a new command",
-      "add-thread": "Thread selector opened",
-      save: "Changes saved to the active instance",
-      "clear-logs": "Log stream cleared",
-      upload: "File picker opened",
-      reload: "Configuration reloaded",
-      "stop-all": "All automated jobs paused",
-      "save-message": "Automatic message schedule saved",
-    };
-    toast(messages[action] || "Action completed");
-  }));
-
   $$(".thread").forEach((thread) => thread.addEventListener("click", () => {
     $$(".thread").forEach((item) => item.classList.remove("active"));
     thread.classList.add("active");
-    const unread = $(".unread", thread);
-    if (unread) unread.remove();
+    $(".unread", thread)?.remove();
   }));
 
   const composer = $(".composer-input textarea");
@@ -129,26 +202,54 @@
       composer.style.height = "auto";
       composer.style.height = `${Math.min(composer.scrollHeight, 100)}px`;
     });
-    $(".composer-input .send-btn").addEventListener("click", () => {
-      if (!composer.value.trim()) return toast("Write a message first", "info");
-      toast("Message queued for Nightwatch Ops");
-      composer.value = "";
-      composer.style.height = "41px";
+    $(".composer-input .send-btn").addEventListener("click", async () => {
+      if (!composer.value.trim()) return toast("Write a message first", "error");
+      try {
+        const data = await api("/api/messages", {
+          method: "POST",
+          body: JSON.stringify({ message: composer.value }),
+        });
+        const chatBody = $(".chat-body");
+        const row = document.createElement("div");
+        row.className = "message-row incoming";
+        row.innerHTML = `<span class="avatar tiny blue-avatar">YO</span><div><small class="sender">You <time>${data.message.time}</time></small><div class="bubble">${escapeHtml(data.message.content)}</div></div>`;
+        chatBody.appendChild(row);
+        chatBody.scrollTop = chatBody.scrollHeight;
+        composer.value = "";
+        composer.style.height = "41px";
+        syncStatus(data.state);
+        toast("Message queued for Nightwatch Ops");
+      } catch (error) {
+        toast(error.message, "error");
+      }
     });
   }
 
   const generateButton = $('[data-action="generate"]');
   const generatedResult = $("#generatedResult");
-  generateButton?.addEventListener("click", () => {
-    generateButton.classList.add("is-loading");
+  generateButton?.addEventListener("click", async (event) => {
+    event.stopImmediatePropagation();
+    const prompt = $(".ai-prompt")?.value.trim();
+    if (!prompt) return toast("Describe the command you want to generate", "error");
+    generateButton.disabled = true;
     generateButton.innerHTML = `${icon("spark")} Generating...`;
-    setTimeout(() => {
+    try {
+      const result = await api("/api/ai/generate", {
+        method: "POST",
+        body: JSON.stringify({ prompt }),
+      });
+      $("> code", generatedResult) && ($("> code", generatedResult).textContent = `!${result.name}`);
+      $("pre", generatedResult).textContent = result.code;
+      $("p", generatedResult).textContent = result.description;
       generatedResult.classList.remove("is-hidden");
       generatedResult.classList.add("is-visible");
-      generateButton.classList.remove("is-loading");
-      generateButton.innerHTML = `${icon("spark")} Generate`;
       toast("Command generated successfully");
-    }, 650);
+    } catch (error) {
+      toast(error.message, "error");
+    } finally {
+      generateButton.disabled = false;
+      generateButton.innerHTML = `${icon("spark")} Generate`;
+    }
   });
 
   $$(".file-row").forEach((file) => file.addEventListener("click", () => {
@@ -157,10 +258,16 @@
     toast(`${$("span", file)?.textContent || "File"} selected`);
   }));
 
-  // Keep static dashboard telemetry feeling alive without pretending it is a backend API.
-  setInterval(() => {
-    const latency = 38 + Math.floor(Math.random() * 12);
-    const label = $(".connection-label");
-    if (label) label.textContent = `· ${latency}ms`;
-  }, 6000);
+  $("#fileInput")?.addEventListener("change", (event) => {
+    const file = event.target.files?.[0];
+    if (file) toast(`${file.name} selected for upload`);
+  });
+
+  function escapeHtml(value) {
+    return value.replace(/[&<>"']/g, (character) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;",
+    }[character]));
+  }
+
+  setInterval(loadStatus, 15000);
 })();
