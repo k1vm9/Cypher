@@ -1,187 +1,278 @@
-<!DOCTYPE html>
-<html lang="ar">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>بوت سيكو</title>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@700&display=swap" rel="stylesheet">
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-      height: 100vh;
-      background: linear-gradient(135deg, #101720, #1f2937);
-      font-family: 'Cairo', sans-serif;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      color: #fff;
-      text-align: center;
-      overflow: hidden;
-    }
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#050609" />
+    <meta name="description" content="Cypher secure AI bot control dashboard" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23dfe3e7'/%3E%3Cpath d='M10 32s9-16 22-16 22 16 22 16-9 16-22 16S10 32 10 32Z' fill='none' stroke='%23050609' stroke-width='6'/%3E%3Ccircle cx='32' cy='32' r='6' fill='%23e32635'/%3E%3C/svg%3E" />
+    <title>Cypher · Bot Dashboard</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <svg class="svg-sprite" aria-hidden="true">
+      <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12s3.3-6 9.5-6 9.5 6 9.5 6-3.3 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.7"/></symbol>
+      <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></symbol>
+      <symbol id="i-message" viewBox="0 0 24 24"><path d="M20 11.5a7.7 7.7 0 0 1-8 7.5 8.8 8.8 0 0 1-3.2-.6L4 20l1.5-3.5A7.1 7.1 0 0 1 4 11.5 7.7 7.7 0 0 1 12 4a7.7 7.7 0 0 1 8 7.5Z"/><path d="M8 11.8h.01M12 11.8h.01M16 11.8h.01"/></symbol>
+      <symbol id="i-inbox" viewBox="0 0 24 24"><path d="M4 4h16l1 11a2 2 0 0 1-2 2h-4a3 3 0 0 1-6 0H5a2 2 0 0 1-2-2L4 4Z"/><path d="M4 13h4a4 4 0 0 0 8 0h4"/></symbol>
+      <symbol id="i-terminal" viewBox="0 0 24 24"><path d="m5 7 4 5-4 5M11.5 17H19"/><rect x="3" y="3" width="18" height="18" rx="3"/></symbol>
+      <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 19 6v5.5c0 4.5-2.9 7.6-7 9.5-4.1-1.9-7-5-7-9.5V6l7-3Z"/><path d="m9 12 2 2 4-4"/></symbol>
+      <symbol id="i-settings" viewBox="0 0 24 24"><path d="M12 8.3a3.7 3.7 0 1 0 0 7.4 3.7 3.7 0 0 0 0-7.4Z"/><path d="m19.4 13.5 1.2 1-.1 1.2-1.6 1.5-1.4-.6a7.5 7.5 0 0 1-1.8 1l-.2 1.5-1 .7h-2.1l-.8-1.2-.2-1a7.4 7.4 0 0 1-1.9-1l-1.4.6-1.6-1.5-.1-1.2 1.2-1a7.5 7.5 0 0 1 0-2.1l-1.2-1 .1-1.2 1.6-1.5 1.4.6a7.4 7.4 0 0 1 1.9-1l.2-1.5 1-.7h2.1l.8 1.2.2 1a7.5 7.5 0 0 1 1.8 1l1.4-.6 1.6 1.5.1 1.2-1.2 1a7.5 7.5 0 0 1 0 2.1Z"/></symbol>
+      <symbol id="i-logout" viewBox="0 0 24 24"><path d="M14 5V4a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-1M10 12h11M17 8l4 4-4 4"/></symbol>
+      <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20.5 15.6A8.7 8.7 0 0 1 8.4 3.5 8.7 8.7 0 1 0 20.5 15.6Z"/></symbol>
+      <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></symbol>
+      <symbol id="i-bolt" viewBox="0 0 24 24"><path d="m13 2-9 12h7l-1 8 9-12h-7l1-8Z"/></symbol>
+      <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.7-3L3 11M4 5v6h6M4 13a8 8 0 0 0 14.7 3L21 13m0 6v-6h-6"/></symbol>
+      <symbol id="i-stop" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/></symbol>
+      <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></symbol>
+      <symbol id="i-volume" viewBox="0 0 24 24"><path d="M4 10v4h4l5 4V6l-5 4H4ZM17 9a5 5 0 0 1 0 6M19.5 6.5a9 9 0 0 1 0 11"/></symbol>
+      <symbol id="i-pulse" viewBox="0 0 24 24"><path d="M3 12h4l2-6 4 12 2-6h6"/></symbol>
+      <symbol id="i-arrow" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+      <symbol id="i-paperclip" viewBox="0 0 24 24"><path d="m20 11-7.8 7.8a5 5 0 0 1-7.1-7.1l8.5-8.5a3.5 3.5 0 0 1 5 5l-8.5 8.5a2 2 0 0 1-2.8-2.8l7.8-7.8"/></symbol>
+      <symbol id="i-send" viewBox="0 0 24 24"><path d="m21 3-7.5 18-3.5-7L3 10.5 21 3Z"/><path d="m10 14 5-5"/></symbol>
+      <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M8 21h8"/></symbol>
+      <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
+      <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
+      <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></symbol>
+      <symbol id="i-filter" viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4"/></symbol>
+      <symbol id="i-edit" viewBox="0 0 24 24"><path d="m4 16-.8 4.8L8 20l11.5-11.5a2.8 2.8 0 0 0-4-4L4 16Z"/><path d="m13.5 6.5 4 4"/></symbol>
+      <symbol id="i-code" viewBox="0 0 24 24"><path d="m8 8-4 4 4 4M16 8l4 4-4 4M14 4l-4 16"/></symbol>
+      <symbol id="i-spark" viewBox="0 0 24 24"><path d="m12 2 1.7 6.3L20 10l-6.3 1.7L12 18l-1.7-6.3L4 10l6.3-1.7L12 2ZM19 16l.7 2.3L22 19l-2.3.7L19 22l-.7-2.3L16 19l2.3-.7L19 16Z"/></symbol>
+      <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></symbol>
+      <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 6a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6Z"/></symbol>
+      <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 21a7 7 0 0 1 14 0"/></symbol>
+      <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0M16 11a3 3 0 0 0 0-6M18 14a5 5 0 0 1 3 6"/></symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 14h10l1-14M9 7V4h6v3"/></symbol>
+      <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12M7 11l5 5 5-5M4 21h16"/></symbol>
+      <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+      <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+    </svg>
 
-    body::before {
-      content: '';
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      background: radial-gradient(circle at top left, rgba(0,255,136,0.2), transparent 60%),
-                  radial-gradient(circle at bottom right, rgba(0,136,255,0.15), transparent 70%);
-      z-index: 0;
-    }
+    <div class="ambient ambient-red"></div>
+    <div class="ambient ambient-blue"></div>
+    <div class="grain"></div>
 
-    .status-line {
-      font-size: 38px;
-      font-weight: bold;
-      background: linear-gradient(90deg, #ff4d4d, #00ffff, #00ff88);
-      background-size: 300% 300%;
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      animation: animateText 6s ease infinite;
-      margin-bottom: 40px;
-      direction: rtl;
-      z-index: 1;
-    }
+    <section class="login-gate" id="loginGate">
+      <div class="login-card">
+        <div class="logo-mark logo-mark-lg"><svg><use href="#i-eye"/></svg><span></span></div>
+        <div class="eyebrow">SECURE ACCESS <span class="eyebrow-line"></span></div>
+        <h1>Welcome to <strong>Cypher</strong></h1>
+        <p>Enter the access key to open the control center.</p>
+        <form id="loginForm" class="login-form">
+          <input class="sr-only" type="text" name="username" value="cypher-operator" autocomplete="username" />
+          <label for="accessKey">Access key</label>
+          <div class="input-wrap">
+            <svg><use href="#i-lock"/></svg>
+            <input id="accessKey" type="password" placeholder="Enter your access key" autocomplete="current-password" required />
+            <button type="button" class="input-action" id="revealKey" aria-label="Show access key">SHOW</button>
+          </div>
+          <div class="form-error" id="loginError" role="alert"></div>
+          <button class="btn btn-primary btn-block" type="submit">Enter Dashboard <svg><use href="#i-arrow"/></svg></button>
+        </form>
+        <div class="login-foot"><span class="status-dot online"></span> Protected session · local preview</div>
+      </div>
+    </section>
 
-    .green-dot {
-      display: inline-block;
-      width: 12px;
-      height: 12px;
-      background-color: #00ff00;
-      border-radius: 50%;
-      box-shadow: 0 0 10px #00ff00;
-      animation: pulse 1.5s infinite;
-      vertical-align: middle;
-      margin: 0 4px;
-    }
+    <div class="app-shell is-hidden" id="appShell">
+      <header class="topbar">
+        <div class="topbar-inner">
+          <button class="brand" data-tab="home" aria-label="Open Home">
+            <div class="logo-mark"><svg><use href="#i-eye"/></svg><span></span></div>
+            <span class="brand-copy"><strong>Cypher</strong><small>Bot Dashboard</small></span>
+          </button>
+          <div class="topbar-actions">
+            <div class="connection-pill"><span class="status-dot online"></span><span>Online</span><span class="connection-label">· 42ms</span></div>
+            <button class="icon-btn" id="themeToggle" aria-label="Toggle appearance" title="Toggle appearance"><svg><use href="#i-moon"/></svg></button>
+            <button class="btn btn-ghost btn-small" id="logoutBtn"><svg><use href="#i-logout"/></svg> Logout</button>
+          </div>
+        </div>
+      </header>
 
-    .clock {
-      width: 190px;
-      height: 190px;
-      border: 5px solid #fff;
-      border-radius: 50%;
-      position: relative;
-      background: radial-gradient(#2b2b2b, #000);
-      box-shadow: 0 0 15px #000;
-      margin-top: -20px;
-      z-index: 1;
-    }
+      <main class="main-container">
+        <section class="profile-card panel">
+          <div class="profile-glow"></div>
+          <div class="profile-logo logo-mark logo-mark-xl"><svg><use href="#i-eye"/></svg><span></span></div>
+          <div class="profile-copy">
+            <div class="eyebrow">ACTIVE INSTANCE <span class="status-dot online"></span></div>
+            <h1>Cypher</h1>
+            <p>Secure AI automation and messaging bot</p>
+            <code>cypher-prod-7F3A · v1.2.14</code>
+          </div>
+          <div class="profile-meta">
+            <span class="badge badge-success"><span class="status-dot online"></span> Online</span>
+            <span class="profile-updated">Updated just now</span>
+          </div>
+        </section>
 
-    .hand {
-      position: absolute;
-      bottom: 50%;
-      left: 50%;
-      transform-origin: bottom center;
-      transform: rotate(90deg);
-      border-radius: 10px;
-      box-shadow: 0 0 4px rgba(0,0,0,0.6);
-    }
+        <section class="stats-grid" aria-label="Bot statistics">
+          <article class="stat-card"><div class="stat-icon red"><svg><use href="#i-message"/></svg></div><strong data-count="248">248</strong><span>Messages</span><small class="trend up">+12.4%</small></article>
+          <article class="stat-card"><div class="stat-icon green"><svg><use href="#i-terminal"/></svg></div><strong data-count="36">36</strong><span>Commands</span><small class="trend up">+4.8%</small></article>
+          <article class="stat-card"><div class="stat-icon crimson"><svg><use href="#i-users"/></svg></div><strong data-count="18">18</strong><span>Groups</span><small class="trend">steady</small></article>
+          <article class="stat-card"><div class="stat-icon amber"><svg><use href="#i-user"/></svg></div><strong data-count="1240">1,240</strong><span>Users</span><small class="trend up">+8.1%</small></article>
+          <article class="stat-card"><div class="stat-icon cyan"><svg><use href="#i-pulse"/></svg></div><strong>14d 06h</strong><span>Uptime</span><small class="trend">stable</small></article>
+          <article class="stat-card"><div class="stat-icon red"><svg><use href="#i-bolt"/></svg></div><strong>1,842</strong><span>Total commands</span><small class="trend up">+19.2%</small></article>
+          <article class="stat-card"><div class="stat-icon green"><svg><use href="#i-shield"/></svg></div><strong>07</strong><span>Protection layers</span><small class="trend">active</small></article>
+          <article class="stat-card"><div class="stat-icon purple"><svg><use href="#i-grid"/></svg></div><strong>186 MB</strong><span>RAM usage</span><small class="trend">of 512 MB</small></article>
+        </section>
 
-    .hour {
-      width: 6px;
-      height: 45px;
-      background: #fff;
-      z-index: 3;
-    }
+        <div class="feature-nav-wrap">
+          <button class="scroll-nav" id="navPrev" aria-label="Scroll navigation left"><svg class="flip"><use href="#i-chevron"/></svg></button>
+          <nav class="feature-nav" id="featureNav" aria-label="Dashboard sections">
+            <button class="nav-item active" data-tab="home"><svg><use href="#i-grid"/></svg>Home</button>
+            <button class="nav-item" data-tab="messenger"><svg><use href="#i-message"/></svg>Messenger<span class="nav-count">3</span></button>
+            <button class="nav-item" data-tab="cookies"><svg><use href="#i-lock"/></svg>Cookies</button>
+            <button class="nav-item" data-tab="commands"><svg><use href="#i-terminal"/></svg>Commands</button>
+            <button class="nav-item" data-tab="activation"><svg><use href="#i-bolt"/></svg>Activation</button>
+            <button class="nav-item" data-tab="editor"><svg><use href="#i-code"/></svg>Editor</button>
+            <button class="nav-item" data-tab="protection"><svg><use href="#i-shield"/></svg>Protection</button>
+            <button class="nav-item" data-tab="settings"><svg><use href="#i-settings"/></svg>Settings</button>
+            <button class="nav-item" data-tab="messages"><svg><use href="#i-inbox"/></svg>Messages</button>
+            <button class="nav-item" data-tab="logs"><svg><use href="#i-terminal"/></svg>Logs</button>
+            <button class="nav-item" data-tab="ai"><svg><use href="#i-spark"/></svg>AI Intelligence</button>
+            <button class="nav-item" data-tab="files"><svg><use href="#i-folder"/></svg>Files</button>
+            <button class="nav-item" data-tab="admin"><svg><use href="#i-user"/></svg>Admin</button>
+            <button class="nav-item" data-tab="control"><svg><use href="#i-pulse"/></svg>Control Center</button>
+          </nav>
+          <button class="scroll-nav" id="navNext" aria-label="Scroll navigation right"><svg><use href="#i-chevron"/></svg></button>
+        </div>
 
-    .minute {
-      width: 4px;
-      height: 65px;
-      background: #ccc;
-      z-index: 2;
-    }
+        <div class="tab-panels">
+          <section class="tab-panel active" id="panel-home" data-panel="home">
+            <div class="section-heading"><div><div class="eyebrow">COMMAND DECK</div><h2>Main Controls</h2><p>Operate your bot instance with confidence.</p></div><span class="last-sync"><span class="status-dot online"></span> Live telemetry</span></div>
+            <div class="control-grid">
+              <button class="control-card danger" data-action="restart"><span class="control-icon"><svg><use href="#i-refresh"/></svg></span><span><strong>Restart Bot</strong><small>Reload the active instance</small></span><svg class="card-arrow"><use href="#i-arrow"/></svg></button>
+              <button class="control-card danger" data-action="stop"><span class="control-icon"><svg><use href="#i-stop"/></svg></span><span><strong>Stop Bot</strong><small>Bring the instance offline</small></span><svg class="card-arrow"><use href="#i-arrow"/></svg></button>
+              <button class="control-card warning" data-action="admin"><span class="control-icon"><svg><use href="#i-lock"/></svg></span><span><strong>Admin Only</strong><small>Lock bot to administrators</small></span><span class="toggle mini active"><i></i></span></button>
+              <button class="control-card warning" data-action="silent"><span class="control-icon"><svg><use href="#i-volume"/></svg></span><span><strong>Silent Mode</strong><small>Pause non-critical replies</small></span><span class="toggle mini"><i></i></span></button>
+              <button class="control-card" data-action="refresh"><span class="control-icon"><svg><use href="#i-refresh"/></svg></span><span><strong>Refresh Data</strong><small>Sync live bot telemetry</small></span><svg class="card-arrow"><use href="#i-arrow"/></svg></button>
+              <button class="control-card" data-action="ping"><span class="control-icon"><svg><use href="#i-pulse"/></svg></span><span><strong>Ping</strong><small>Check connection latency</small></span><span class="control-value">42ms</span></button>
+              <button class="control-card" data-tab-target="messenger"><span class="control-icon"><svg><use href="#i-message"/></svg></span><span><strong>Open Messenger</strong><small>View active conversations</small></span><svg class="card-arrow"><use href="#i-arrow"/></svg></button>
+              <button class="control-card" data-tab-target="logs"><span class="control-icon"><svg><use href="#i-terminal"/></svg></span><span><strong>View Logs</strong><small>Inspect system activity</small></span><svg class="card-arrow"><use href="#i-arrow"/></svg></button>
+            </div>
+            <div class="two-column lower-grid">
+              <article class="panel sub-panel message-preview-card"><div class="card-heading"><div><h3>Latest Messages</h3><p>Recent activity across your groups</p></div><button class="text-btn" data-tab-target="messages">View all <svg><use href="#i-arrow"/></svg></button></div><div class="empty-state compact"><div class="empty-icon"><svg><use href="#i-eye"/></svg></div><strong>No messages yet</strong><span>New activity will appear here in real time.</span></div></article>
+              <article class="panel sub-panel health-card"><div class="card-heading"><div><h3>System health</h3><p>All systems operational</p></div><span class="badge badge-success">99.98%</span></div><div class="health-row"><span>Core process</span><div class="progress"><i style="width:92%"></i></div><b>Healthy</b></div><div class="health-row"><span>Database</span><div class="progress"><i style="width:100%"></i></div><b>Healthy</b></div><div class="health-row"><span>MQTT bridge</span><div class="progress"><i style="width:86%"></i></div><b>Stable</b></div><div class="health-footer"><span class="status-dot online"></span> Last check 11 seconds ago</div></article>
+            </div>
+          </section>
 
-    .second {
-      width: 2px;
-      height: 85px;
-      background: red;
-      z-index: 1;
-    }
+          <section class="tab-panel" id="panel-messenger" data-panel="messenger">
+            <div class="section-heading"><div><div class="eyebrow">COMMUNICATIONS</div><h2>Messenger</h2><p>Keep a pulse on every active conversation.</p></div><div class="heading-actions"><button class="icon-btn"><svg><use href="#i-search"/></svg></button><button class="btn btn-ghost btn-small"><svg><use href="#i-more"/></svg> More</button></div></div>
+            <div class="messenger panel">
+              <aside class="thread-sidebar"><div class="messenger-side-head"><div><strong>Conversations</strong><span>18 active groups</span></div><button class="icon-btn"><svg><use href="#i-plus"/></svg></button></div><div class="search-box"><svg><use href="#i-search"/></svg><input placeholder="Search threads" aria-label="Search threads" /></div><div class="thread-list">
+                <button class="thread active"><span class="avatar red-avatar">NX</span><span class="thread-copy"><strong>Nightwatch Ops</strong><small>Cypher, check the queue...</small></span><time>2m</time><i class="unread">2</i></button>
+                <button class="thread"><span class="avatar blue-avatar">DS</span><span class="thread-copy"><strong>Design Systems</strong><small>Alex: New token set is live</small></span><time>18m</time></button>
+                <button class="thread"><span class="avatar purple-avatar">AI</span><span class="thread-copy"><strong>AI Lab / prompts</strong><small>Cypher: Generation complete</small></span><time>1h</time></button>
+                <button class="thread"><span class="avatar green-avatar">OC</span><span class="thread-copy"><strong>Ops Control</strong><small>System health is stable</small></span><time>3h</time></button>
+              </div></aside>
+              <div class="chat-area"><div class="chat-head"><span class="avatar red-avatar">NX</span><div><strong>Nightwatch Ops</strong><small><span class="status-dot online"></span> 12 members · Active now</small></div><div class="chat-actions"><button class="icon-btn" aria-label="Search chat"><svg><use href="#i-search"/></svg></button><button class="icon-btn" aria-label="Group info"><svg><use href="#i-info"/></svg></button><button class="icon-btn" aria-label="More options"><svg><use href="#i-more"/></svg></button></div></div><div class="chat-body"><div class="date-separator"><span>Today, August 27</span></div><div class="message-row incoming"><span class="avatar tiny blue-avatar">JM</span><div><small class="sender">Jordan M. <time>10:42 AM</time></small><div class="bubble">Can Cypher summarize the overnight queue?</div></div></div><div class="message-row bot"><span class="avatar tiny eye-avatar"><svg><use href="#i-eye"/></svg></span><div><small class="sender">Cypher <time>10:42 AM</time></small><div class="bubble">Absolutely. There are <strong>3 items</strong> awaiting review and no critical alerts.</div><div class="message-status"><svg><use href="#i-check"/></svg> Delivered</div></div></div><div class="message-row incoming"><span class="avatar tiny green-avatar">RK</span><div><small class="sender">Rina K. <time>10:44 AM</time></small><div class="bubble">Perfect, thank you.</div></div></div></div><div class="composer"><div class="composer-tools"><button class="icon-btn" aria-label="Attach file"><svg><use href="#i-paperclip"/></svg></button><button class="icon-btn" aria-label="Record voice"><svg><use href="#i-mic"/></svg></button><span class="silent-chip"><span class="status-dot amber"></span> Silent off</span></div><div class="composer-input"><textarea rows="1" placeholder="Write a message..." aria-label="Message"></textarea><button class="send-btn" aria-label="Send message"><svg><use href="#i-send"/></svg></button></div></div></div>
+              <aside class="group-sidebar"><div class="group-cover"><div class="avatar group-avatar red-avatar">NX</div><button class="icon-btn"><svg><use href="#i-more"/></svg></button></div><div class="group-copy"><strong>Nightwatch Ops</strong><span>Operations & automation</span><code>thread_8841</code></div><div class="group-stat"><span>Members</span><strong>12</strong></div><div class="member-list"><div class="member-list-head"><span>Members</span><button class="text-btn">View all</button></div><div class="member"><span class="avatar tiny blue-avatar">JM</span><span>Jordan M.</span><i class="status-dot online"></i></div><div class="member"><span class="avatar tiny purple-avatar">AS</span><span>Alex Stone</span><i class="status-dot online"></i></div><div class="member"><span class="avatar tiny green-avatar">RK</span><span>Rina K.</span><i class="status-dot amber"></i></div></div></aside>
+            </div>
+          </section>
 
-    .center {
-      width: 14px;
-      height: 14px;
-      background: #fff;
-      border-radius: 50%;
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      box-shadow: 0 0 6px #fff;
-      z-index: 5;
-    }
+          <section class="tab-panel" id="panel-cookies" data-panel="cookies">
+            <div class="section-heading"><div><div class="eyebrow">SESSION SECURITY</div><h2>Cookies</h2><p>Import a trusted session to connect Cypher to Messenger.</p></div><span class="badge badge-warning"><svg><use href="#i-lock"/></svg> Sensitive</span></div>
+            <div class="two-column">
+              <article class="panel sub-panel form-card"><div class="card-heading"><div><h3>Import session data</h3><p>Paste an exported appstate file or upload a JSON file.</p></div><div class="card-icon red"><svg><use href="#i-upload"/></svg></div></div><label class="field-label" for="cookieInput">Session payload</label><textarea class="code-area cookie-area" id="cookieInput" placeholder='[ { "key": "...", "value": "..." } ]'></textarea><div class="dropzone"><svg><use href="#i-upload"/></svg><span><strong>Drop JSON here</strong> or browse files</span><small>JSON only · encrypted in transit</small></div><div class="form-actions"><button class="btn btn-primary" data-action="import">Import session <svg><use href="#i-arrow"/></svg></button><span class="form-note">Your session stays on this instance.</span></div></article>
+              <article class="panel sub-panel warning-card"><div class="card-heading"><div><h3>Before you import</h3><p>Keep your account protected.</p></div><div class="card-icon amber"><svg><use href="#i-shield"/></svg></div></div><ul class="check-list"><li><svg><use href="#i-check"/></svg><span>Only use sessions from an account you control.</span></li><li><svg><use href="#i-check"/></svg><span>Never paste cookies into public chats or logs.</span></li><li><svg><use href="#i-check"/></svg><span>Importing a new session replaces the current one.</span></li></ul><div class="security-callout"><svg><use href="#i-lock"/></svg><div><strong>Encrypted at rest</strong><span>Stored only for this bot instance.</span></div></div></article>
+            </div>
+          </section>
 
-    .time-box {
-      font-size: 20px;
-      background: #222;
-      padding: 10px 20px;
-      border: 2px solid #00ff88;
-      border-radius: 12px;
-      box-shadow: 0 0 15px rgba(0, 255, 136, 0.5);
-      margin-top: 30px;
-      z-index: 1;
-    }
+          <section class="tab-panel" id="panel-commands" data-panel="commands">
+            <div class="section-heading"><div><div class="eyebrow">AUTOMATION LIBRARY</div><h2>Commands <span class="inline-count">36</span></h2><p>Manage the commands your bot knows.</p></div><button class="btn btn-primary btn-small" data-action="new-command"><svg><use href="#i-plus"/></svg> New command</button></div>
+            <div class="toolbar panel"><div class="search-box wide"><svg><use href="#i-search"/></svg><input placeholder="Search commands" aria-label="Search commands" /></div><button class="filter-btn active">All commands</button><button class="filter-btn">Utility</button><button class="filter-btn">AI</button><button class="filter-btn">Admin</button><button class="icon-btn"><svg><use href="#i-filter"/></svg></button></div>
+            <div class="command-grid"><article class="command-card panel"><div class="command-top"><code>!ask</code><span class="badge badge-purple">AI</span></div><p>Ask Cypher Intelligence a question.</p><div class="command-meta"><span>Alias: <code>ai</code></span><span class="permission"><svg><use href="#i-user"/></svg> Everyone</span></div><div class="command-bottom"><span class="status-label enabled"><span class="status-dot online"></span> Enabled</span><button class="text-btn">Edit <svg><use href="#i-arrow"/></svg></button></div></article><article class="command-card panel"><div class="command-top"><code>!help</code><span class="badge badge-cyan">Utility</span></div><p>Show available bot commands.</p><div class="command-meta"><span>Alias: <code>menu</code></span><span class="permission"><svg><use href="#i-user"/></svg> Everyone</span></div><div class="command-bottom"><span class="status-label enabled"><span class="status-dot online"></span> Enabled</span><button class="text-btn">Edit <svg><use href="#i-arrow"/></svg></button></div></article><article class="command-card panel"><div class="command-top"><code>!broadcast</code><span class="badge badge-red">Admin</span></div><p>Send an announcement to active groups.</p><div class="command-meta"><span>No aliases</span><span class="permission"><svg><use href="#i-lock"/></svg> Admins</span></div><div class="command-bottom"><span class="status-label enabled"><span class="status-dot online"></span> Enabled</span><button class="text-btn">Edit <svg><use href="#i-arrow"/></svg></button></div></article><article class="command-card panel"><div class="command-top"><code>!uptime</code><span class="badge badge-cyan">Utility</span></div><p>Check bot uptime and current health.</p><div class="command-meta"><span>No aliases</span><span class="permission"><svg><use href="#i-user"/></svg> Everyone</span></div><div class="command-bottom"><span class="status-label disabled"><span class="status-dot"></span> Disabled</span><button class="text-btn">Edit <svg><use href="#i-arrow"/></svg></button></div></article><article class="command-card panel"><div class="command-top"><code>!protect</code><span class="badge badge-red">Admin</span></div><p>Configure group protection layers.</p><div class="command-meta"><span>Alias: <code>guard</code></span><span class="permission"><svg><use href="#i-lock"/></svg> Admins</span></div><div class="command-bottom"><span class="status-label enabled"><span class="status-dot online"></span> Enabled</span><button class="text-btn">Edit <svg><use href="#i-arrow"/></svg></button></div></article><article class="command-card panel"><div class="command-top"><code>!summarize</code><span class="badge badge-purple">AI</span></div><p>Create a concise thread summary.</p><div class="command-meta"><span>Alias: <code>sum</code></span><span class="permission"><svg><use href="#i-user"/></svg> Everyone</span></div><div class="command-bottom"><span class="status-label enabled"><span class="status-dot online"></span> Enabled</span><button class="text-btn">Edit <svg><use href="#i-arrow"/></svg></button></div></article></div>
+          </section>
 
-    @keyframes animateText {
-      0% { background-position: 0% 50%; }
-      50% { background-position: 100% 50%; }
-      100% { background-position: 0% 50%; }
-    }
+          <section class="tab-panel" id="panel-activation">
+            <div class="section-heading"><div><div class="eyebrow">THREAD ROUTING</div><h2>Activation</h2><p>Choose where Cypher can respond and operate.</p></div><button class="btn btn-primary btn-small" data-action="save"><svg><use href="#i-check"/></svg> Save changes</button></div>
+            <div class="two-column"><article class="panel sub-panel form-card"><div class="card-heading"><div><h3>Thread configuration</h3><p>Set the default activation behavior.</p></div></div><label class="field-label" for="threadId">Thread or group ID</label><div class="input-wrap"><svg><use href="#i-users"/></svg><input id="threadId" value="thread_8841" /></div><label class="field-label" for="announcement">Announcement text</label><textarea class="text-area" id="announcement" placeholder="Optional welcome or activation message..."></textarea><div class="field-label">Activation mode</div><div class="segmented"><button class="active">Whitelist</button><button>Blacklist</button></div><div class="hint"><svg><use href="#i-info"/></svg> Whitelist mode keeps Cypher limited to the threads listed below.</div></article><article class="panel sub-panel"><div class="card-heading"><div><h3>Active threads</h3><p>4 threads are currently connected.</p></div><button class="icon-btn"><svg><use href="#i-refresh"/></svg></button></div><div class="active-thread"><span class="avatar tiny red-avatar">NX</span><div><strong>Nightwatch Ops</strong><code>thread_8841</code></div><span class="badge badge-success">Active</span></div><div class="active-thread"><span class="avatar tiny blue-avatar">DS</span><div><strong>Design Systems</strong><code>thread_9204</code></div><span class="badge badge-success">Active</span></div><div class="active-thread"><span class="avatar tiny purple-avatar">AI</span><div><strong>AI Lab / prompts</strong><code>thread_1920</code></div><span class="badge badge-warning">Paused</span></div><button class="btn btn-ghost btn-block add-thread" data-action="add-thread"><svg><use href="#i-plus"/></svg> Add thread</button></article></div>
+          </section>
 
-    @keyframes pulse {
-      0%, 100% {
-        box-shadow: 0 0 5px #00ff00, 0 0 10px #00ff00;
-      }
-      50% {
-        box-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00;
-      }
-    }
-  </style>
-</head>
-<body>
-  <div class="status-line">
-    بـوت سـيـکـو مـتـصـل {<span class="green-dot"></span>}
-  </div>
+          <section class="tab-panel" id="panel-editor">
+            <div class="section-heading"><div><div class="eyebrow">COMMAND WORKBENCH</div><h2>Editor</h2><p>Refine command metadata and behavior.</p></div><span class="save-state"><span class="status-dot online"></span> All changes saved</span></div>
+            <div class="editor-layout panel"><aside class="editor-sidebar"><label class="field-label">Select command</label><div class="command-select active"><code>!ask</code><span>AI command</span><svg><use href="#i-chevron"/></svg></div><div class="command-select"><code>!help</code><span>Utility</span><svg><use href="#i-chevron"/></svg></div><div class="command-select"><code>!protect</code><span>Admin</span><svg><use href="#i-chevron"/></svg></div><button class="btn btn-ghost btn-block"><svg><use href="#i-plus"/></svg> Add command</button></aside><div class="editor-main"><div class="editor-meta-grid"><div><label class="field-label">Command name</label><input value="ask" /></div><div><label class="field-label">Permission level</label><select><option>Everyone</option><option>Admins only</option></select></div><div class="wide-field"><label class="field-label">Description</label><input value="Ask Cypher Intelligence a question." /></div><div><label class="field-label">Aliases</label><input value="ai, askai" /></div><div><label class="field-label">Usage guide</label><input value="!ask [question]" /></div></div><div class="code-heading"><span><svg><use href="#i-code"/></svg> command.js</span><span>JavaScript <span class="dot-sep">·</span> 2.4 KB</span></div><textarea class="code-editor" spellcheck="false">module.exports = {
+  config: {
+    name: "ask",
+    version: "1.0.0",
+    role: 0,
+    description: "Ask Cypher Intelligence a question."
+  },
 
-  <div class="clock">
-    <div class="hand hour" id="hour"></div>
-    <div class="hand minute" id="minute"></div>
-    <div class="hand second" id="second"></div>
-    <div class="center"></div>
-  </div>
+  async run({ api, event, args }) {
+    const prompt = args.join(" ");
+    return api.sendMessage(
+      await cypher.ask(prompt),
+      event.threadID
+    );
+  }
+};</textarea><div class="editor-footer"><span class="hint"><svg><use href="#i-info"/></svg> Use <code>event</code> for message context and <code>api</code> for Messenger actions.</span><button class="btn btn-primary btn-small" data-action="save"><svg><use href="#i-check"/></svg> Save command</button></div></div></div>
+          </section>
 
-  <div class="time-box" id="timeBox">الوقت الحالي: ...</div>
+          <section class="tab-panel" id="panel-protection">
+            <div class="section-heading"><div><div class="eyebrow">DEFENSE MATRIX</div><h2>Protection</h2><p>Seven active layers keep your communities safe.</p></div><span class="badge badge-success"><span class="status-dot online"></span> 6 enabled</span></div>
+            <div class="protection-grid"><article class="protection-card panel"><div class="protection-top"><div class="card-icon green"><svg><use href="#i-shield"/></svg></div><span class="severity low">Low risk</span></div><h3>Anti-spam</h3><p>Detect and throttle repeated messages.</p><div class="protection-bottom"><span class="status-label enabled">Enabled</span><button class="toggle active" aria-label="Toggle anti-spam"><i></i></button></div></article><article class="protection-card panel"><div class="protection-top"><div class="card-icon green"><svg><use href="#i-lock"/></svg></div><span class="severity medium">Medium</span></div><h3>Anti-link</h3><p>Block suspicious external links in groups.</p><div class="protection-bottom"><span class="status-label enabled">Enabled</span><button class="toggle active" aria-label="Toggle anti-link"><i></i></button></div></article><article class="protection-card panel"><div class="protection-top"><div class="card-icon amber"><svg><use href="#i-pulse"/></svg></div><span class="severity medium">Medium</span></div><h3>Anti-flood</h3><p>Limit bursts of automated activity.</p><div class="protection-bottom"><span class="status-label enabled">Enabled</span><button class="toggle active" aria-label="Toggle anti-flood"><i></i></button></div></article><article class="protection-card panel"><div class="protection-top"><div class="card-icon red"><svg><use href="#i-shield"/></svg></div><span class="severity high">High</span></div><h3>Anti-abuse</h3><p>Flag malicious or harmful behavior.</p><div class="protection-bottom"><span class="status-label enabled">Enabled</span><button class="toggle active" aria-label="Toggle anti-abuse"><i></i></button></div></article><article class="protection-card panel"><div class="protection-top"><div class="card-icon gray"><svg><use href="#i-lock"/></svg></div><span class="severity low">Low risk</span></div><h3>Admin-only mode</h3><p>Restrict commands to trusted roles.</p><div class="protection-bottom"><span class="status-label disabled">Disabled</span><button class="toggle" aria-label="Toggle admin-only mode"><i></i></button></div></article><article class="protection-card panel"><div class="protection-top"><div class="card-icon green"><svg><use href="#i-pulse"/></svg></div><span class="severity low">Low risk</span></div><h3>Rate limiting</h3><p>Protect APIs from excessive requests.</p><div class="protection-bottom"><span class="status-label enabled">Enabled</span><button class="toggle active" aria-label="Toggle rate limiting"><i></i></button></div></article></div>
+          </section>
 
-  <script>
-    function updateClock() {
-      const now = new Date();
-      const gmtPlus1 = new Date(now.getTime() + 1 * 60 * 60 * 1000);
-      const hour = gmtPlus1.getUTCHours();
-      const minute = gmtPlus1.getUTCMinutes();
-      const second = gmtPlus1.getUTCSeconds();
+          <section class="tab-panel" id="panel-settings">
+            <div class="section-heading"><div><div class="eyebrow">INSTANCE PREFERENCES</div><h2>Settings</h2><p>Shape the way Cypher behaves across your workspace.</p></div><button class="btn btn-primary btn-small" data-action="save"><svg><use href="#i-check"/></svg> Save settings</button></div>
+            <div class="settings-grid"><article class="panel settings-card"><div class="card-heading"><div><h3>General</h3><p>Basic bot identity and commands.</p></div><div class="card-icon red"><svg><use href="#i-settings"/></svg></div></div><label class="field-label">Bot name</label><input value="Cypher" /><label class="field-label">Command prefix</label><input value="!" /><label class="field-label">Default language</label><select><option>English (US)</option><option>Tiếng Việt</option></select></article><article class="panel settings-card"><div class="card-heading"><div><h3>Connection</h3><p>Keep your instance reachable.</p></div><div class="card-icon cyan"><svg><use href="#i-pulse"/></svg></div></div><div class="setting-row"><div><strong>Keep-alive</strong><small>Maintain a warm connection</small></div><button class="toggle active" aria-label="Toggle keep-alive"><i></i></button></div><div class="setting-row"><div><strong>MQTT reconnect</strong><small>Reconnect automatically on failure</small></div><button class="toggle active" aria-label="Toggle MQTT reconnect"><i></i></button></div><label class="field-label">Reconnect interval</label><select><option>60 seconds</option><option>5 minutes</option><option>15 minutes</option></select></article><article class="panel settings-card"><div class="card-heading"><div><h3>Privacy</h3><p>Control visibility and responses.</p></div><div class="card-icon purple"><svg><use href="#i-eye"/></svg></div></div><div class="setting-row"><div><strong>Stealth mode</strong><small>Reduce bot presence signals</small></div><button class="toggle" aria-label="Toggle stealth mode"><i></i></button></div><div class="setting-row"><div><strong>Allow inbox messages</strong><small>Respond to direct messages</small></div><button class="toggle active" aria-label="Toggle inbox messages"><i></i></button></div></article><article class="panel settings-card"><div class="card-heading"><div><h3>Access control</h3><p>Protect high-impact operations.</p></div><div class="card-icon amber"><svg><use href="#i-lock"/></svg></div></div><div class="setting-row"><div><strong>Admin-only mode</strong><small>Only admins can use commands</small></div><button class="toggle active" aria-label="Toggle admin-only mode"><i></i></button></div><label class="field-label">Dashboard password</label><form id="settingsForm" class="input-wrap"><svg><use href="#i-lock"/></svg><input type="password" value="cypher-access" autocomplete="new-password" /><button type="button" class="input-action">CHANGE</button></form></article></div>
+          </section>
 
-      document.getElementById('hour').style.transform = `rotate(${(hour % 12) * 30 + minute / 2}deg)`;
-      document.getElementById('minute').style.transform = `rotate(${minute * 6}deg)`;
-      document.getElementById('second').style.transform = `rotate(${second * 6}deg)`;
-    }
+          <section class="tab-panel" id="panel-messages">
+            <div class="section-heading"><div><div class="eyebrow">ACTIVITY FEED</div><h2>Messages</h2><p>Review recent message events from connected threads.</p></div><div class="heading-actions"><button class="btn btn-ghost btn-small"><svg><use href="#i-filter"/></svg> Filter</button><button class="icon-btn"><svg><use href="#i-refresh"/></svg></button></div></div>
+            <div class="panel table-card"><div class="table-toolbar"><div class="search-box wide"><svg><use href="#i-search"/></svg><input placeholder="Search message log" /></div><span class="table-count">248 events</span></div><div class="data-table"><div class="table-row table-head"><span>Sender</span><span>Thread</span><span>Message preview</span><span>Time</span><span>Status</span></div><div class="table-row"><span class="person"><span class="avatar tiny blue-avatar">JM</span>Jordan M.</span><span>Nightwatch Ops</span><span>Can Cypher summarize...</span><time>10:42 AM</time><span class="status-label enabled">Processed</span></div><div class="table-row"><span class="person"><span class="avatar tiny purple-avatar">AS</span>Alex Stone</span><span>Design Systems</span><span>New token set is live</span><time>10:24 AM</time><span class="status-label enabled">Processed</span></div><div class="table-row"><span class="person"><span class="avatar tiny green-avatar">RK</span>Rina K.</span><span>Nightwatch Ops</span><span>Perfect, thank you.</span><time>10:12 AM</time><span class="status-label enabled">Processed</span></div><div class="table-row"><span class="person"><span class="avatar tiny red-avatar">NX</span>Nightwatch Ops</span><span>Nightwatch Ops</span><span>/protect status</span><time>9:58 AM</time><span class="status-label enabled">Processed</span></div></div></div>
+          </section>
 
-    function updateTime() {
-      const options = {
-        timeZone: 'Africa/Algiers',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false
-      };
-      const now = new Date().toLocaleTimeString('ar-DZ', options);
-      document.getElementById('timeBox').textContent = `الوقت الحالي: ${now}`;
-    }
+          <section class="tab-panel" id="panel-logs">
+            <div class="section-heading"><div><div class="eyebrow">SYSTEM OUTPUT</div><h2>Logs <span class="inline-count">124</span></h2><p>Terminal output and operational events.</p></div><div class="heading-actions"><label class="switch-label">Auto-scroll <button class="toggle active" aria-label="Toggle auto-scroll"><i></i></button></label><button class="btn btn-ghost btn-small" data-action="clear-logs"><svg><use href="#i-trash"/></svg> Clear</button><button class="btn btn-ghost btn-small"><svg><use href="#i-download"/></svg> Download</button></div></div>
+            <div class="log-window panel"><div class="log-head"><span><i></i><i></i><i></i> cypher-core / stream</span><span>LIVE <span class="status-dot online"></span></span></div><div class="log-lines" id="logLines"><div><time>10:46:02</time><b class="info">INFO</b><span>Connection heartbeat received <em>latency=42ms</em></span></div><div><time>10:45:51</time><b class="success">OK</b><span>Protection layer check complete <em>layers=7</em></span></div><div><time>10:45:27</time><b class="info">INFO</b><span>Thread sync completed <em>threads=18</em></span></div><div><time>10:44:18</time><b class="warn">WARN</b><span>AI context file not found, skipped <em>file=notes.md</em></span></div><div><time>10:42:31</time><b class="success">OK</b><span>Command executed successfully <em>command=!ask</em></span></div><div><time>10:41:08</time><b class="info">INFO</b><span>New message event received <em>thread=8841</em></span></div><div><time>10:38:54</time><b class="success">OK</b><span>Database checkpoint committed <em>duration=18ms</em></span></div><div><time>10:35:10</time><b class="info">INFO</b><span>MQTT listener connected <em>transport=secure</em></span></div></div></div>
+          </section>
 
-    setInterval(updateClock, 1000);
-    setInterval(updateTime, 1000);
-    updateClock();
-    updateTime();
-  </script>
-</body>
+          <section class="tab-panel" id="panel-ai">
+            <div class="section-heading"><div><div class="eyebrow">COMMAND LABORATORY</div><h2>AI Intelligence</h2><p>Generate, test, and refine new bot capabilities.</p></div><span class="badge badge-purple"><svg><use href="#i-spark"/></svg> Ready</span></div>
+            <div class="ai-layout"><article class="panel ai-generator"><div class="card-heading"><div><h3>Generate a command</h3><p>Describe what you want Cypher to automate.</p></div><div class="card-icon red"><svg><use href="#i-spark"/></svg></div></div><textarea class="text-area ai-prompt" placeholder="e.g. Create a command that summarizes the last 20 messages in a thread..."></textarea><div class="context-row"><span class="field-label">Context files</span><button class="file-chip"><svg><use href="#i-code"/></svg> command-style.md <span>×</span></button><button class="icon-btn"><svg><use href="#i-plus"/></svg></button></div><button class="btn btn-primary btn-block" data-action="generate"><svg><use href="#i-spark"/></svg> Generate</button><div class="generated-result is-hidden" id="generatedResult"><div class="result-head"><span><span class="status-dot online"></span> Generation complete</span><button class="icon-btn"><svg><use href="#i-copy"/></svg></button></div><code>!summarize</code><pre>async function summarize({ api, event }) {
+  const messages = await getRecentMessages(event.threadID, 20);
+  return api.sendMessage(formatSummary(messages), event.threadID);
+}</pre><p>Summarizes recent thread activity using the bot's message context.</p><div class="result-actions"><button class="btn btn-ghost btn-small">Copy code</button><button class="btn btn-primary btn-small">Save as command</button></div></div></article><article class="panel ai-chat"><div class="card-heading"><div><h3>Ask Cypher AI</h3><p>Your assistant for bot operations.</p></div><div class="card-icon purple"><svg><use href="#i-message"/></svg></div></div><div class="ai-history"><div class="ai-message assistant"><span class="avatar tiny eye-avatar"><svg><use href="#i-eye"/></svg></span><div>Hi, I’m Cypher AI. Ask me about commands, logs, or how to configure your bot.</div></div><div class="ai-message user">What protections are currently active?</div><div class="ai-message assistant"><span class="avatar tiny eye-avatar"><svg><use href="#i-eye"/></svg></span><div>Six layers are enabled, including anti-spam, anti-link, and anti-abuse. The system is healthy.</div></div></div><div class="ai-composer"><input placeholder="Ask Cypher AI about the bot..." /><button class="send-btn"><svg><use href="#i-send"/></svg></button></div><button class="text-btn reset-ai">Reset conversation</button></article></div>
+          </section>
+
+          <section class="tab-panel" id="panel-files">
+            <div class="section-heading"><div><div class="eyebrow">INSTANCE FILESYSTEM</div><h2>Files</h2><p>Browse source files and bring context into the AI lab.</p></div><button class="btn btn-primary btn-small" data-action="upload"><svg><use href="#i-upload"/></svg> Upload file</button></div>
+            <div class="files-layout panel"><aside class="files-list"><div class="file-search search-box"><svg><use href="#i-search"/></svg><input placeholder="Filter files" /></div><div class="folder-label"><svg><use href="#i-folder"/></svg> Root</div><button class="file-row active"><svg><use href="#i-code"/></svg><span>config.json</span><small>4.8 KB</small></button><button class="file-row"><svg><use href="#i-code"/></svg><span>main.js</span><small>18.2 KB</small></button><button class="file-row"><svg><use href="#i-lock"/></svg><span>appstate.json</span><small>Sensitive</small></button><button class="file-row"><svg><use href="#i-code"/></svg><span>index.js</span><small>5.1 KB</small></button><div class="folder-label"><svg><use href="#i-folder"/></svg> modules / commands</div><button class="file-row"><svg><use href="#i-code"/></svg><span>ask.js</span><small>2.4 KB</small></button><button class="file-row"><svg><use href="#i-code"/></svg><span>help.js</span><small>6.2 KB</small></button></aside><div class="file-preview"><div class="file-preview-head"><div><strong>config.json</strong><span>Root · 4.8 KB · JSON</span></div><div class="heading-actions"><button class="btn btn-ghost btn-small"><svg><use href="#i-spark"/></svg> Add to AI</button><button class="icon-btn"><svg><use href="#i-more"/></svg></button></div></div><pre class="code-preview"><span class="punct">{</span>
+  <span class="key">"language"</span><span class="punct">:</span> <span class="str">"en"</span><span class="punct">,</span>
+  <span class="key">"prefix"</span><span class="punct">:</span> <span class="str">"!"</span><span class="punct">,</span>
+  <span class="key">"adminOnly"</span><span class="punct">:</span> <span class="bool">false</span><span class="punct">,</span>
+  <span class="key">"notifications"</span><span class="punct">:</span> <span class="bool">true</span><span class="punct">,</span>
+  <span class="key">"protections"</span><span class="punct">:</span> <span class="punct">{</span>
+    <span class="key">"antiSpam"</span><span class="punct">:</span> <span class="bool">true</span><span class="punct">,</span>
+    <span class="key">"antiLink"</span><span class="punct">:</span> <span class="bool">true</span>
+  <span class="punct">}</span>
+<span class="punct">}</span></pre><div class="file-preview-footer"><span class="security-text"><svg><use href="#i-lock"/></svg> Sensitive values are redacted</span><button class="btn btn-primary btn-small" data-action="save"><svg><use href="#i-check"/></svg> Save file</button></div></div></div>
+          </section>
+
+          <section class="tab-panel" id="panel-admin">
+            <div class="section-heading"><div><div class="eyebrow">TRUSTED OPERATORS</div><h2>Admin</h2><p>Manage who can access high-impact bot controls.</p></div><button class="btn btn-primary btn-small" data-action="save"><svg><use href="#i-check"/></svg> Save admin list</button></div>
+            <div class="admin-grid"><article class="panel admin-card owner-card"><div class="card-heading"><div><h3>Owner</h3><p>One account with full control.</p></div><div class="role-icon owner"><svg><use href="#i-eye"/></svg></div></div><div class="uid-row"><code>100000422915498</code><button class="icon-btn" aria-label="Remove owner"><svg><use href="#i-trash"/></svg></button></div><button class="btn btn-ghost btn-block"><svg><use href="#i-plus"/></svg> Add owner</button></article><article class="panel admin-card"><div class="card-heading"><div><h3>Super admins <span class="inline-count">2</span></h3><p>Can manage settings and access.</p></div><div class="role-icon super"><svg><use href="#i-shield"/></svg></div></div><div class="uid-list"><div class="uid-row"><code>61583680184127</code><button class="icon-btn"><svg><use href="#i-trash"/></svg></button></div><div class="uid-row"><code>61587144945550</code><button class="icon-btn"><svg><use href="#i-trash"/></svg></button></div></div><button class="btn btn-ghost btn-block"><svg><use href="#i-plus"/></svg> Add super admin</button></article><article class="panel admin-card"><div class="card-heading"><div><h3>Admins <span class="inline-count">4</span></h3><p>Can use approved bot commands.</p></div><div class="role-icon admin"><svg><use href="#i-user"/></svg></div></div><div class="uid-list"><div class="uid-row"><code>61583478796243</code><button class="icon-btn"><svg><use href="#i-trash"/></svg></button></div><div class="uid-row"><code>61588343552902</code><button class="icon-btn"><svg><use href="#i-trash"/></svg></button></div><div class="uid-row"><code>61551923107091</code><button class="icon-btn"><svg><use href="#i-trash"/></svg></button></div></div><button class="btn btn-ghost btn-block"><svg><use href="#i-plus"/></svg> Add admin</button></article></div><div class="admin-footer panel"><span><svg><use href="#i-refresh"/></svg> Configuration synced 2 minutes ago</span><button class="text-btn" data-action="reload">Reload current config <svg><use href="#i-arrow"/></svg></button></div>
+          </section>
+
+          <section class="tab-panel" id="panel-control">
+            <div class="section-heading"><div><div class="eyebrow">AUTOMATION ORCHESTRATOR</div><h2>Control Center</h2><p>Schedule messages and automate group behavior.</p></div><button class="btn btn-danger btn-small" data-action="stop-all"><svg><use href="#i-stop"/></svg> Stop all automation</button></div>
+            <div class="control-center-grid"><article class="panel automation-card"><div class="card-heading"><div><h3>Automatic messages</h3><p>Send a recurring message to a selected group.</p></div><button class="toggle active" aria-label="Toggle automatic messages"><i></i></button></div><label class="field-label">Target group</label><select><option>Nightwatch Ops · thread_8841</option><option>Design Systems · thread_9204</option></select><label class="field-label">Message</label><textarea class="text-area" placeholder="Type the automated message...">Daily operations check-in: all systems are healthy.</textarea><div class="two-fields"><div><label class="field-label">Minimum interval</label><div class="input-unit"><input value="30" /><span>min</span></div></div><div><label class="field-label">Maximum interval</label><div class="input-unit"><input value="60" /><span>min</span></div></div></div><div class="form-actions"><button class="btn btn-primary btn-small" data-action="save-message">Save message</button><span class="next-run">Next run · in 42 min</span></div></article><article class="panel automation-card"><div class="card-heading"><div><h3>Group name locking</h3><p>Keep important group identities consistent.</p></div><button class="toggle active" aria-label="Toggle group name locking"><i></i></button></div><div class="locked-name"><span class="avatar tiny red-avatar">NX</span><div><strong>Nightwatch Ops</strong><small>Locked name · last checked 4m ago</small></div><button class="icon-btn"><svg><use href="#i-edit"/></svg></button></div><div class="setting-row"><div><strong>Auto-restore changes</strong><small>Restore the name when modified</small></div><button class="toggle active" aria-label="Toggle auto-restore"><i></i></button></div><div class="card-heading automation-subhead"><div><h3>Nicknames</h3><p>Global and bot-specific display names.</p></div><button class="btn btn-ghost btn-small"><svg><use href="#i-plus"/></svg> Add</button></div><div class="nickname-row"><span>Global</span><code>Nightwatch</code><button class="icon-btn"><svg><use href="#i-edit"/></svg></button></div><div class="nickname-row"><span>Cypher</span><code>Cypher · AI</code><button class="icon-btn"><svg><use href="#i-edit"/></svg></button></div></article></div>
+          </section>
+        </div>
+      </main>
+
+      <nav class="mobile-nav" aria-label="Mobile dashboard sections">
+        <button class="active" data-tab="home"><svg><use href="#i-grid"/></svg><span>Home</span></button>
+        <button data-tab="messenger"><svg><use href="#i-message"/></svg><span>Chat</span><i></i></button>
+        <button data-tab="commands"><svg><use href="#i-terminal"/></svg><span>Commands</span></button>
+        <button data-tab="ai"><svg><use href="#i-spark"/></svg><span>AI</span></button>
+        <button data-tab="settings"><svg><use href="#i-settings"/></svg><span>Settings</span></button>
+      </nav>
+    </div>
+    <div class="toast-region" id="toastRegion" aria-live="polite"></div>
+    <script src="/app.js"></script>
+  </body>
 </html>

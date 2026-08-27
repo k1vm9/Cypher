@@ -1,0 +1,162 @@
+Design and build a polished, responsive web control dashboard for an AI bot named “Cypher.” Use the supplied Veil bot dashboard as the structural and interaction reference, but do not copy its branding, colors, logo, or exact visual identity. Preserve the same overall product concept: a secure bot administration panel with a password gate, status header, statistics, horizontally scrollable feature navigation, command controls, messenger, logs, editor, AI tools, files, security, settings, and administrator controls.
+
+BRAND AND VISUAL DIRECTION
+
+The product name is Cypher. The brand symbol is a minimalist black eye with a vivid red pupil. The eye should feel watchful, intelligent, covert, and slightly cybernetic rather than cartoonish. Use the logo consistently in the login card, header, bot profile card, messenger avatars, empty states, favicon-style icon, and mobile navigation where appropriate. The logo should be an original SVG or CSS-based mark: a sharp almond-shaped black eye, subtle angular geometry, a small glowing red pupil, and a restrained red reflection or ring. Do not use a generic emoji eye.
+
+Create a substantially darker color scheme than the reference. Use near-black graphite and blue-black surfaces rather than purple backgrounds. Suggested colors are: page background #050609, secondary background #0A0D12, elevated surface #10151C, brighter surface #151C25, border rgba(255,255,255,0.10), primary text #F2F4F7, secondary text rgba(242,244,247,0.58), muted text rgba(242,244,247,0.32), primary accent #E32635, brighter accent #FF4654, deep red #8E101B, success #35D07F, warning #F2B84B, cyan #49C8E8, and purple #9B7CFF. Use red as the dominant action color, but keep it controlled and premium rather than covering the entire interface in red.
+
+The background should be a fixed, almost-black canvas with very subtle animated blurred radial orbs: a dark crimson orb in one corner, a muted blue-gray orb in another, and a low-opacity red glow behind the main content. Add a barely visible noise or grain texture if possible. The background animation must be slow and non-distracting. Use a dark translucent overlay and saturated blur for glass-like panels.
+
+Use a modern system sans-serif font such as Inter, SF Pro Display, Segoe UI, or a comparable clean UI font. Use a monospace font such as JetBrains Mono or Fira Code for bot IDs, logs, code, and technical metadata. The overall interface should feel like a high-end security operations console combined with a modern messaging application.
+
+GLOBAL LAYOUT
+
+The desktop layout is centered in a maximum-width content container of approximately 980–1180 pixels with generous horizontal breathing room. Use a sticky translucent header at the top with a thin bottom border and backdrop blur. Place the Cypher logo on the left, followed by the word “Cypher” and the subtitle “Bot Dashboard.” On the right, show a compact connection-status pill with a colored status dot, a theme control if theme switching is supported, and a logout button.
+
+Use rounded cards throughout the dashboard, but avoid excessive softness. Use medium-to-large corner radii between 16 and 26 pixels, thin translucent borders, subtle inset highlights, and deep soft shadows. Cards should feel layered over the dark background. Add restrained hover elevation and a small upward movement for clickable cards and buttons. Use spring-like transitions for active states and short ease transitions for color and opacity changes.
+
+PASSWORD LOGIN SCREEN
+
+Before the dashboard is accessible, show a full-screen modal login gate. The modal should be centered both vertically and horizontally over a darkened, blurred version of the animated background. The login panel should be a compact glassmorphism card with a dark elevated surface, thin red-tinted border, deep shadow, and a subtle red glow behind the logo.
+
+At the top of the card, display the Cypher eye logo inside a rounded-square or circular container with a very subtle red pulse. Under it, show the title “Cypher” and the subtitle “Enter the access key to open the control center.” Include one password input with a clear placeholder such as “Access key,” and a full-width primary button labeled “Enter Dashboard.” The input should show a red border and soft red background tint when focused. Provide a small inline error message area for invalid credentials. The login card should animate in with a gentle fade, slide, and scale effect.
+
+DASHBOARD HEADER AND BOT PROFILE
+
+After authentication, show the main dashboard. The sticky header should display the Cypher logo at approximately 38–42 pixels, the title “Cypher,” and “Bot Dashboard” as a muted subtitle. Add an online/offline/connecting status pill with a small animated dot. Use green for online, red for offline, and amber for connecting. Add a circular appearance toggle and a compact “Logout” button.
+
+Below the header, include a bot profile card with a slightly stronger red gradient tint than regular cards. Display a larger Cypher eye logo, the bot name “Cypher,” a descriptive subtitle such as “Secure AI automation and messaging bot,” and a monospace bot UID or instance identifier. Add a small status label and a faint radial red glow inside the card, positioned behind the logo.
+
+STATISTICS OVERVIEW
+
+Create a responsive statistics grid below the profile card. On desktop, use four columns; on small screens, use two columns. Each statistic is a compact translucent card with an icon, a large numeric value, and a small muted label. Include the following metrics:
+
+• Messages
+• Commands
+• Groups
+• Users
+• Uptime
+• Total commands
+• Protection layers
+• RAM usage in MB
+
+Use different restrained accent colors for the numeric values: red, green, crimson, amber, cyan, red, green, and purple. Add a subtle hover lift, a faint diagonal highlight, and animated value transitions when data changes. Use placeholders such as “0,” “—,” or “20” when data is unavailable.
+
+HORIZONTAL FEATURE NAVIGATION
+
+Under the statistics, create a horizontally scrollable pill-style navigation bar. Include left and right scroll arrow buttons on desktop and allow touch or trackpad scrolling on mobile. Tabs should have dark translucent backgrounds, thin borders, muted text, and strong red highlighting for the active tab.
+
+Include these tabs in this order:
+
+1. Home
+2. Messenger
+3. Cookies
+4. Commands
+5. Activation
+6. Editor
+7. Protection
+8. Settings
+9. Messages
+10. Logs
+11. AI Intelligence
+12. Files
+13. Admin
+14. Control Center
+
+The active tab should have a red-to-crimson gradient, light or near-white text, a subtle red glow, and a tiny upward shift. Switching tabs should animate the new pane in with a short fade, vertical slide, and slight scale transition. On mobile, also provide a fixed bottom navigation bar with the most important tabs, compact icons, labels, a red active background tint, and a small red indicator line above the active item.
+
+HOME / CONTROL CENTER TAB
+
+Make the default Home tab a bot operations overview. Add a section titled “Main Controls” with a responsive action-button grid. Include:
+
+• Restart Bot
+• Stop Bot
+• Lock Bot for Admins Only
+• Silent Mode
+• Refresh Data
+• Ping
+• Open Messenger
+• View Logs
+
+Use red for destructive or high-impact actions, green for positive actions, amber for silent or restricted states, and neutral translucent styling for secondary actions. Buttons should have icons, clear labels, hover states, pressed states, disabled states, and confirmation feedback where appropriate.
+
+Below the controls, include a card titled “Latest Messages.” Show an empty state when no messages exist, with a small Cypher logo or abstract chat icon and the text “No messages yet.” When messages exist, show compact message previews with sender, content, timestamp, and status.
+
+MESSENGER TAB
+
+Create a full-height messenger workspace inside a rounded glass panel. On desktop, use three flexible zones: a left conversation sidebar approximately 260–300 pixels wide, a central chat area, and an optional right-side group information panel approximately 240–280 pixels wide. On smaller screens, collapse the sidebar and group panel into mobile drawers or alternate views.
+
+The messenger sidebar should include a title such as “Messenger,” a search field, and a scrollable list of threads. Each thread contains a circular avatar, thread name, latest-message preview, timestamp, and optional unread badge. The selected thread should have a subtle red background tint and a red edge indicator.
+
+The chat area should include a header with the selected avatar, name, metadata, and compact action buttons such as group information, search, and more options. The message area should support incoming messages, bot messages, system notices, timestamps, date separators, attachments, images, and audio previews. Use rounded message bubbles with different alignment and tint for user messages and Cypher responses. Cypher messages should use a subtle crimson gradient and may show a small Cypher logo avatar.
+
+At the bottom, create a sticky chat composer with a multiline rounded input, attachment button, voice-record button, silent-mode control, and red send button. Support a file-preview chip, recording indicator, silent-mode banner, disabled sending state, and auto-growing text area. The composer should remain comfortable on both desktop and mobile.
+
+The optional group information panel should display the group avatar, group name, group metadata, member count, member list, member avatars, and compact administrative actions. Include editable group name and broadcast-message fields.
+
+COOKIES TAB
+
+Create a secure cookies or session-import panel. Include a clear explanation of what the cookie data is used for, a multiline input or file-upload area, an upload/import button, validation feedback, and a security warning. Visually distinguish sensitive actions with a red or amber warning treatment without making the page visually alarming.
+
+COMMANDS TAB
+
+Create a command management view with a total-command counter, search input, category filter, and responsive command grid. Each command card should show the command name, short description, aliases, category, permissions, and an action such as open, edit, or disable. Use compact technical metadata and monospace formatting for command names.
+
+ACTIVATION TAB
+
+Create an activation or thread-configuration panel. Include a thread or group ID field, a list of active threads, content or announcement text area, an activation mode selector with blacklist and whitelist options, a contextual hint, and a save button. Use clear active/inactive status chips and red accents for enabled protections.
+
+EDITOR TAB
+
+Create a command editor split into a metadata section and a code editor section. Include a command selector, command name, description, aliases, role or permission level, usage guide, save metadata button, command name field, save command button, a large monospace code textarea, and a contextual help note. The editor should look like a refined dark IDE panel with subtle syntax-color cues, but do not overcomplicate it with a full IDE layout.
+
+PROTECTION TAB
+
+Create a protection-management grid with multiple security modules represented as cards. Examples include anti-spam, anti-link, anti-flood, anti-abuse, admin-only mode, rate limiting, and suspicious-activity monitoring. Each card should contain a title, short explanation, enabled/disabled toggle, severity indicator, and optional configuration button. Use green for enabled protection, gray for disabled protection, amber for caution, and red for critical alerts.
+
+SETTINGS TAB
+
+Create a settings form containing bot name, command prefix, dashboard password, stealth mode, keep-alive, MQTT or connection settings, and admin-only mode. Use labeled inputs, toggles, selects, helper text, validation states, and a prominent save button. Separate settings into logical cards such as General, Connection, Privacy, and Access Control.
+
+ADMIN TAB
+
+Create an administrator-management interface with fields for owner UID, super-admin UIDs, and regular admin UIDs. Show current entries as removable chips or list rows. Include actions to add an owner, add a super admin, add an admin, save the admin list, and reload the current configuration. Use monospace styling for UIDs and clearly differentiate owner, super-admin, and admin roles.
+
+MESSAGES AND LOGS TABS
+
+The Messages tab should show a message log with compact rows, sender information, timestamps, content previews, and filtering or refresh controls. The Logs tab should use a terminal-like dark panel with monospace text, line spacing, timestamps, severity colors, and controls for auto-scroll, clear, refresh, and download. Include a log-count badge and make the panel scrollable without causing the page to jump.
+
+AI INTELLIGENCE TAB
+
+Create an AI command-generation and assistant interface. Include a textarea for describing a desired bot command, optional context-file chips, a red primary “Generate” button, a loading state, and a generated-result card. The result card should show the generated command name, code preview, copy button, save-as-command button, and a short explanation.
+
+Below or beside it, include an AI chat card with a conversation history, a question input, send button, attachment button, reset button, and a helper placeholder such as “Ask Cypher AI about the bot or its commands.” The AI pane should feel like an intelligent command laboratory, using subtle red data-glow accents and monospace code blocks.
+
+FILES TAB
+
+Create a file-management and editor layout with a file list, selected-file metadata, file preview or code editor, and controls for adding files to AI context, saving, deleting, and uploading. Use a clear empty state when no file is selected. Mark sensitive files with a shield or lock indicator.
+
+CONTROL CENTER TAB
+
+Create a more advanced operational-control pane for automated bot behavior. Include a group selector, refresh-list button, automatic-message controls, scheduling fields, minimum and maximum randomized intervals, start and stop actions, and save-message/save-time actions. Include separate modules for automatic messages, group-name locking, global nicknames, bot nicknames, and a master stop-all action.
+
+RESPONSIVE BEHAVIOR
+
+On screens wider than approximately 700 pixels, use the full centered dashboard, desktop messenger columns, and the top horizontal navigation. On smaller screens, stack cards vertically, use two-column statistics, collapse messenger sidebars into drawers, keep controls touch-friendly, and show the fixed bottom navigation bar. Maintain safe-area padding for mobile devices. Avoid horizontal page overflow; only the navigation strip and intentionally scrollable lists may scroll horizontally.
+
+INTERACTION AND MOTION
+
+Use short, refined animations: login fade and slide, tab-pane fade and lift, active-tab spring movement, status-dot pulse, subtle logo breathing glow, button hover elevation, message arrival animation, empty-state icon float, and smooth messenger scrolling. Respect prefers-reduced-motion by disabling nonessential animation. Every button should have hover, focus-visible, pressed, disabled, and loading states. Use accessible labels and tooltips for icon-only controls.
+
+ACCESSIBILITY AND QUALITY
+
+Use semantic HTML, keyboard-accessible controls, visible focus rings, sufficient contrast, ARIA labels for icon-only buttons, logical tab order, and clear form error messages. Make the dashboard functional with realistic mock data and believable empty states. Avoid excessive gradients, excessive neon, noisy backgrounds, overly rounded cartoon-like components, or generic dashboard templates. The finished result should feel like a dark, covert, premium command console for an intelligent bot named Cypher.
+
+COPY AND LABELING
+
+Use English UI copy by default. Use concise labels such as “Enter Dashboard,” “Online,” “Main Controls,” “Latest Messages,” “Messenger,” “Commands,” “Protection,” “AI Intelligence,” “Files,” “Admin,” “Restart Bot,” “Stop Bot,” “Silent Mode,” “Refresh,” “Ping,” “Open Messenger,” and “View Logs.” Keep the brand name exactly as “Cypher” everywhere.
+
+FINAL DESIGN CHECK
+
+The final UI should immediately communicate: secure access, bot status, operational control, messaging, automation, AI assistance, and administration. It should preserve the reference dashboard’s comprehensive feature organization and mobile-friendly interaction model while transforming the identity into a darker black/graphite interface with restrained crimson accents and a distinctive black eye with a red pupil as the central Cypher symbol.
