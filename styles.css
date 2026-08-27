@@ -46,8 +46,8 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width:
 @keyframes toast-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 .login-gate { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: rgba(2,3,5,.28); backdrop-filter: blur(3px); }
 .login-card { width: min(100%, 410px); padding: 40px; border: 1px solid rgba(227,38,53,.25); border-radius: 26px; background: rgba(16,21,28,.87); box-shadow: 0 35px 110px rgba(0,0,0,.63), 0 0 80px rgba(142,16,27,.13); text-align: center; animation: rise .7s ease both; }
-.logo-mark { position: relative; display: grid; place-items: center; flex: 0 0 auto; width: 38px; height: 38px; color: #090a0d; background: #dfe3e7; border: 1px solid rgba(255,255,255,.34); border-radius: 12px; box-shadow: inset 0 -4px 9px rgba(0,0,0,.2); }
-.logo-mark svg { width: 25px; height: 25px; stroke: #050609; stroke-width: 2.15; }
+.logo-mark { position: relative; display: grid; place-items: center; flex: 0 0 auto; width: 38px; height: 38px; color: #f2f4f7; background: #0d1117; border: 1px solid rgba(255,255,255,.16); border-radius: 12px; box-shadow: inset 0 -4px 9px rgba(0,0,0,.35), 0 0 18px rgba(227,38,53,.08); }
+.logo-mark svg { width: 25px; height: 25px; stroke: #f2f4f7; stroke-width: 2.15; }
 .logo-mark span { position: absolute; width: 5px; height: 5px; background: var(--red-bright); border-radius: 50%; top: 16px; left: 17px; box-shadow: 0 0 8px var(--red-bright); }
 .logo-mark-lg { width: 68px; height: 68px; margin: 0 auto 24px; border-radius: 20px; animation: breathe 3s ease-in-out infinite; }
 .logo-mark-lg svg { width: 43px; height: 43px; }
@@ -212,8 +212,8 @@ code, pre, .profile-copy code { font-family: "JetBrains Mono", "SFMono-Regular",
 .blue-avatar { background: linear-gradient(135deg, #286781, #183646); }
 .purple-avatar { background: linear-gradient(135deg, #6349a7, #302452); }
 .green-avatar { background: linear-gradient(135deg, #277e5c, #174332); }
-.eye-avatar { color: #080a0d; background: #dfe3e7; }
-.eye-avatar svg { width: 17px; height: 17px; stroke: #090a0d; stroke-width: 2; }
+.eye-avatar { color: #f2f4f7; background: #0d1117; border: 1px solid rgba(255,255,255,.16); }
+.eye-avatar svg { width: 17px; height: 17px; stroke: #f2f4f7; stroke-width: 2; }
 .thread-copy { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 .thread-copy strong { overflow: hidden; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
 .thread-copy small { overflow: hidden; color: var(--muted); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
@@ -457,7 +457,7 @@ body.light .panel, body.light .stat-card, body.light .control-card, body.light .
 body.light .ambient { opacity: .06; }
 body.light .login-gate { background: rgba(238,241,244,.3); }
 body.light .login-card { background: rgba(255,255,255,.9); }
-body.light .logo-mark { background: #151a21; }
+body.light .logo-mark { background: #0d1117; }
 body.light .logo-mark svg { stroke: #f3f4f5; }
 body.light .code-area, body.light .code-editor, body.light .code-preview, body.light .log-window, body.light .log-lines, body.light .generated-result pre { background: #11151b; }
 @media (max-width: 980px) {
