@@ -102,7 +102,7 @@ class MessengerRuntime {
     this.stoppedByUser = false;
     this.startPromise = (async () => {
       let login;
-      const candidates = ["@dongdev/fca-unofficial", "@xaviabot/fca-unofficial", "fca-prjvt"];
+      const candidates = ["@dongdev/fca-unofficial"];
       for (const candidate of candidates) {
         try {
           login = require(candidate);
