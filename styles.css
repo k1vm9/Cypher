@@ -256,6 +256,11 @@ code, pre, .profile-copy code { font-family: "JetBrains Mono", "SFMono-Regular",
 .group-stat { display: flex; justify-content: space-between; padding: 16px 0; color: var(--muted); font-size: 10px; }
 .group-stat strong { color: var(--text); font-size: 12px; }
 .member-list-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; color: var(--muted); font-size: 9px; }
+.member-row { display: flex; align-items: center; gap: 9px; width: 100%; padding: 8px 0; color: var(--text); background: transparent; text-align: left; }
+.member-row:hover { color: var(--red-bright); }
+.member-row > span:nth-child(2) { display: grid; gap: 3px; min-width: 0; }
+.member-row strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; }
+.member-row code { color: var(--muted); font-size: 8px; }
 .member { display: flex; align-items: center; gap: 7px; margin: 11px 0; color: var(--subtext); font-size: 9px; }
 .member .status-dot { margin-left: auto; width: 5px; height: 5px; }
 .form-card, .warning-card { min-height: 330px; }

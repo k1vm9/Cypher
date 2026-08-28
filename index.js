@@ -32,6 +32,7 @@ const sessions = new Map();
 const sseClients = new Set();
 const loginAttempts = new Map();
 const csrfFailures = new Map();
+const scheduleTimers = new Map();
 let messengerRuntime;
 
 const veilProtectionNames = [
@@ -185,6 +186,20 @@ function publicState() {
       userID: null,
       connectedAt: null,
       error: null,
+    },
+    runtime: {
+      node: process.version,
+      platform: process.platform,
+      pid: process.pid,
+      processUptime: Math.floor(process.uptime()),
+      memory: {
+        rss: Math.round(process.memoryUsage().rss / 1024 / 1024),
+        heapUsed: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+        heapTotal: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
+      },
+      client: messenger?.client || null,
+      reconnectAttempts: messenger?.reconnectAttempts || 0,
+      scheduledJobs: state.schedules.filter((schedule) => schedule.enabled).length,
     },
   };
 }
@@ -466,7 +481,12 @@ function clearLiveData() {
 function applyMessengerSnapshot(snapshot, announce = false) {
   state.status = snapshot?.status || "no-session";
   state.latency = snapshot?.connected ? state.latency : null;
-  if (!snapshot?.connected) clearLiveData();
+  if (!snapshot?.connected) {
+    clearLiveData();
+    clearScheduleTimers();
+  } else {
+    syncScheduleTimers();
+  }
   if (announce) broadcast("state-update", publicState());
 }
 
@@ -513,21 +533,115 @@ async function refreshLiveThreads() {
   return threads;
 }
 
-function parseSessionPayload(payload) {
-  let parsed;
-  try {
-    parsed = JSON.parse(String(payload || ""));
-  } catch {
-    throw new Error("Session payload must be valid JSON.");
+function clearScheduleTimer(id) {
+  const timer = scheduleTimers.get(id);
+  if (timer) clearTimeout(timer);
+  scheduleTimers.delete(id);
+}
+
+function clearScheduleTimers() {
+  for (const id of scheduleTimers.keys()) clearScheduleTimer(id);
+}
+
+function scheduleDelay(schedule) {
+  const min = Math.max(1, Number(schedule.min) || 30);
+  const max = Math.max(min, Number(schedule.max) || min);
+  const minutes = min + Math.random() * (max - min);
+  return Math.round(minutes * 60 * 1000);
+}
+
+function scheduleNextRun(schedule) {
+  clearScheduleTimer(schedule.id);
+  if (!schedule.enabled || !messengerRuntime?.snapshot().connected) {
+    schedule.nextRunAt = null;
+    return;
   }
-  const cookies = Array.isArray(parsed) ? parsed : parsed && Array.isArray(parsed.cookies) ? parsed.cookies : null;
-  if (!cookies?.length) throw new Error("Session payload must contain a non-empty cookie array.");
-  const normalized = cookies.map((cookie) => {
+  const delay = scheduleDelay(schedule);
+  schedule.nextRunAt = Date.now() + delay;
+  const timer = setTimeout(async () => {
+    scheduleTimers.delete(schedule.id);
+    await runScheduledMessage(schedule);
+  }, delay);
+  timer.unref?.();
+  scheduleTimers.set(schedule.id, timer);
+}
+
+async function runScheduledMessage(schedule) {
+  if (!schedule.enabled) return;
+  if (!messengerRuntime?.snapshot().connected) {
+    schedule.lastError = "Waiting for a connected Messenger session.";
+    schedule.nextRunAt = null;
+    return;
+  }
+  const thread = findThread(schedule.threadID);
+  if (!thread) {
+    schedule.lastError = "Target thread is no longer available.";
+    addLog("WARN", "Scheduled message skipped", `thread=${schedule.threadID}`);
+    scheduleNextRun(schedule);
+    mutateAndBroadcast();
+    return;
+  }
+  try {
+    await messengerRuntime.sendMessage(schedule.threadID, schedule.message);
+    const item = {
+      id: `scheduled_${Date.now()}`,
+      sender: "Cypher",
+      content: schedule.message,
+      time: new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
+      status: "Sent",
+      threadID: schedule.threadID,
+      kind: "bot",
+    };
+    state.messages.unshift(item);
+    state.threadMessages[schedule.threadID] = [...(state.threadMessages[schedule.threadID] || []), item].slice(-100);
+    state.messages = state.messages.slice(0, 100);
+    schedule.lastRunAt = Date.now();
+    schedule.lastError = null;
+    addLog("OK", "Scheduled message sent", `thread=${schedule.threadID}`);
+    broadcast("message", item);
+  } catch (error) {
+    schedule.lastError = String(error.message || error).slice(0, 180);
+    addLog("ERROR", "Scheduled message failed", `thread=${schedule.threadID}`);
+  }
+  scheduleNextRun(schedule);
+  mutateAndBroadcast();
+}
+
+function syncScheduleTimers() {
+  if (!messengerRuntime?.snapshot().connected) {
+    clearScheduleTimers();
+    return;
+  }
+  for (const schedule of state.schedules) scheduleNextRun(schedule);
+}
+
+function parseSessionPayload(payload) {
+  const raw = String(payload || "").trim();
+  if (!raw) throw new Error("Session payload cannot be empty.");
+  let parsed = null;
+  try { parsed = JSON.parse(raw); } catch {
+    // Veil-compatible header format: c_user=123; xs=session-token
+  }
+  let cookies = Array.isArray(parsed) ? parsed
+    : parsed && Array.isArray(parsed.cookies) ? parsed.cookies
+      : parsed && typeof parsed === "object" ? Object.entries(parsed)
+        .filter(([key]) => ["c_user", "xs", "fr", "wd", "datr", "sb", "m_sess", "spin"].includes(key))
+        .map(([key, value]) => ({ key, value }))
+        : null;
+  if (!cookies && raw.includes("=")) {
+    cookies = raw.split(/;\s*/g).filter(Boolean).map((part) => {
+      const separator = part.indexOf("=");
+      return separator > 0 ? { key: part.slice(0, separator).trim(), value: part.slice(separator + 1).trim() } : null;
+    }).filter(Boolean);
+  }
+  if (!cookies?.length) throw new Error("Session payload must contain a cookie array or cookie header.");
+  const deduped = new Map();
+  for (const cookie of cookies) {
     if (!cookie || typeof cookie !== "object") throw new Error("Every session cookie must be an object.");
     const key = String(cookie.key || cookie.name || "").trim();
     const value = String(cookie.value ?? "").trim();
     if (!key || !value) throw new Error("Every session cookie needs a key and value.");
-    return {
+    deduped.set(key, {
       key: key.slice(0, 120),
       value: value.slice(0, 4096),
       domain: String(cookie.domain || ".facebook.com").slice(0, 200),
@@ -537,8 +651,13 @@ function parseSessionPayload(payload) {
       secure: cookie.secure !== false,
       session: Boolean(cookie.session),
       ...(Number.isFinite(Number(cookie.expirationDate)) ? { expirationDate: Number(cookie.expirationDate) } : {}),
-    };
-  });
+    });
+  }
+  const normalized = [...deduped.values()];
+  const keys = new Set(normalized.map((cookie) => cookie.key));
+  if (!keys.has("c_user") || !keys.has("xs")) {
+    throw new Error("Session must include both c_user and xs cookies.");
+  }
   return normalized;
 }
 
@@ -660,6 +779,93 @@ async function handleApi(request, response, requestUrl) {
     }
     mutateAndBroadcast();
     sendJson(response, 200, { ok: true, session, state: publicState() });
+    return true;
+  }
+
+  const threadInfoMatch = pathname.match(/^\/api\/threads\/([^/]+)\/info$/);
+  if (threadInfoMatch && request.method === "GET") {
+    if (!requireAuth(request, response)) return true;
+    const threadID = decodeURIComponent(threadInfoMatch[1]);
+    if (!findThread(threadID)) {
+      sendJson(response, 404, { error: "Thread not found." });
+      return true;
+    }
+    if (!messengerRuntime.snapshot().connected) {
+      sendJson(response, 409, { error: "Connect a valid Messenger session before loading group information." });
+      return true;
+    }
+    try {
+      const info = await messengerRuntime.getThreadInfo(threadID);
+      const members = Array.isArray(info?.participantIDs) ? info.participantIDs.map((id) => {
+        const user = info.userInfo?.find?.((item) => String(item.id || item.userID) === String(id));
+        return { id: String(id), name: String(user?.name || user?.firstName || id) };
+      }) : [];
+      sendJson(response, 200, {
+        ok: true,
+        info: {
+          id: threadID,
+          name: String(info?.threadName || info?.name || findThread(threadID).name),
+          members,
+          approvalMode: Boolean(info?.approvalMode),
+          admins: Array.isArray(info?.adminIDs) ? info.adminIDs.map(String) : [],
+        },
+      });
+    } catch (error) {
+      sendJson(response, 502, { error: `Unable to load group information: ${error.message}` });
+    }
+    return true;
+  }
+
+  const threadActionMatch = pathname.match(/^\/api\/threads\/([^/]+)\/actions$/);
+  if (threadActionMatch && request.method === "POST") {
+    if (!requireMutation(request, response)) return true;
+    const threadID = decodeURIComponent(threadActionMatch[1]);
+    if (!findThread(threadID)) {
+      sendJson(response, 404, { error: "Thread not found." });
+      return true;
+    }
+    let body;
+    try { body = await readJson(request); } catch (error) {
+      sendJson(response, 400, { error: error.message });
+      return true;
+    }
+    if (!messengerRuntime.snapshot().connected) {
+      sendJson(response, 409, { error: "Connect a valid Messenger session before managing a thread." });
+      return true;
+    }
+    const action = String(body.action || "");
+    try {
+      if (action === "mark-read") {
+        await messengerRuntime.markRead(threadID);
+      } else if (action === "rename") {
+        const title = String(body.title || "").trim().slice(0, 120);
+        if (!title) throw new Error("Thread name cannot be empty.");
+        await messengerRuntime.setThreadTitle(threadID, title);
+        const thread = findThread(threadID);
+        if (thread) thread.name = title;
+      } else if (action === "nickname") {
+        const userID = String(body.userID || "").trim();
+        const nickname = String(body.nickname || "").trim().slice(0, 80);
+        if (!userID || !nickname) throw new Error("Member ID and nickname are required.");
+        await messengerRuntime.setNickname(threadID, userID, nickname);
+      } else if (action === "add-member") {
+        const userID = String(body.userID || "").trim();
+        if (!/^\d{4,32}$/.test(userID)) throw new Error("Enter a numeric Messenger user ID.");
+        await messengerRuntime.addMember(threadID, userID);
+      } else if (action === "remove-member") {
+        const userID = String(body.userID || "").trim();
+        if (!/^\d{4,32}$/.test(userID)) throw new Error("Enter a numeric Messenger user ID.");
+        await messengerRuntime.removeMember(threadID, userID);
+      } else {
+        sendJson(response, 422, { error: "Unknown thread action." });
+        return true;
+      }
+      addLog("OK", "Messenger thread action completed", `action=${action} · thread=${threadID}`);
+      mutateAndBroadcast();
+      sendJson(response, 200, { ok: true, action, state: publicState() });
+    } catch (error) {
+      sendJson(response, 502, { error: `Messenger action failed: ${error.message}` });
+    }
     return true;
   }
 
@@ -863,6 +1069,7 @@ async function handleApi(request, response, requestUrl) {
       addLog("OK", "Log stream cleared");
     } else if (action === "stop-all") {
       state.schedules = state.schedules.map((schedule) => ({ ...schedule, enabled: false }));
+      clearScheduleTimers();
       addLog("WARN", "All automated jobs paused");
     } else if (action === "schedule-toggle") {
       const scheduleId = String(body.id || "").slice(0, 80);
@@ -872,6 +1079,8 @@ async function handleApi(request, response, requestUrl) {
         return true;
       }
       schedule.enabled = body.enabled !== undefined ? Boolean(body.enabled) : !schedule.enabled;
+      if (schedule.enabled) scheduleNextRun(schedule);
+      else clearScheduleTimer(schedule.id);
       addLog("INFO", "Automatic message schedule updated", `enabled=${schedule.enabled}`);
     } else if (action === "admin" || action === "silent" || action === "lock") {
       if (action === "lock") state.botLocked = body.enabled !== undefined ? Boolean(body.enabled) : !state.botLocked;
@@ -905,6 +1114,8 @@ async function handleApi(request, response, requestUrl) {
         const existing = state.schedules.findIndex((item) => item.id === schedule.id);
         if (existing >= 0) state.schedules[existing] = schedule;
         else state.schedules.push(schedule);
+        if (schedule.enabled && messengerRuntime.snapshot().connected) scheduleNextRun(schedule);
+        else clearScheduleTimer(schedule.id);
       }
       addLog("OK", "Configuration saved", "source=dashboard");
     } else {
@@ -1175,6 +1386,16 @@ const server = http.createServer(async (request, response) => {
 
   const requestUrl = new URL(request.url || "/", `http://${request.headers.host || "localhost"}`);
   try {
+    if (requestUrl.pathname === "/health" && (request.method === "GET" || request.method === "HEAD")) {
+      sendJson(response, 200, {
+        ok: true,
+        status: "running",
+        messenger: messengerRuntime?.snapshot().status || "starting",
+        uptime: Math.floor(process.uptime()),
+        timestamp: Date.now(),
+      });
+      return;
+    }
     if (requestUrl.pathname.startsWith("/api/")) {
       await handleApi(request, response, requestUrl);
       return;

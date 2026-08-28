@@ -13,6 +13,7 @@
   let csrfToken = "";
   let currentThread = "";
   let eventStream = null;
+  let currentGroupInfo = null;
 
   function escapeHtml(value) {
     return String(value ?? "").replace(/[&<>"']/g, (character) => ({
@@ -149,7 +150,36 @@
         label.innerHTML = `<span class="status-dot ${data.protections?.[toggle.dataset.protection] ? "online" : ""}"></span> ${data.protections?.[toggle.dataset.protection] ? "Enabled" : "Disabled"}`;
       }
     });
+    renderHealth(data, status);
     syncSession(messenger);
+  }
+
+  function renderHealth(data, status) {
+    const card = $(".health-card");
+    if (!card) return;
+    const connected = status === "connected";
+    const dependencyReady = Boolean(data.runtime?.client);
+    const rows = $$(".health-row", card);
+    const values = [
+      [100, "Healthy"],
+      [100, "Healthy"],
+      [connected ? 100 : dependencyReady ? 35 : 0, connected ? "Healthy" : dependencyReady ? "Ready" : "Waiting"],
+    ];
+    rows.forEach((row, index) => {
+      const progress = $(".progress i", row);
+      const label = row.querySelector("b");
+      if (progress) progress.style.width = `${values[index]?.[0] || 0}%`;
+      if (label) label.textContent = values[index]?.[1] || "Waiting";
+    });
+    const badge = $(".card-heading .badge", card);
+    if (badge) {
+      badge.className = `badge ${connected ? "badge-success" : "badge-warning"}`;
+      badge.textContent = connected ? "Healthy" : "Awaiting session";
+    }
+    const footer = $(".health-footer", card);
+    if (footer) {
+      footer.innerHTML = `<span class="status-dot ${connected ? "online" : ""}"></span> ${connected ? `Live bridge · ${data.runtime?.client || "Messenger"}` : dependencyReady ? "Import a Messenger session to begin live checks" : "Messenger client unavailable until its dependency is installed"}`;
+    }
   }
 
   function syncSession(session = {}) {
@@ -388,7 +418,11 @@
     if (fields[0] && document.activeElement !== fields[0]) fields[0].value = schedule.min;
     if (fields[1] && document.activeElement !== fields[1]) fields[1].value = schedule.max;
     const nextRun = $(".next-run", card);
-    if (nextRun) nextRun.textContent = schedule.enabled ? `Next run · every ${schedule.min}–${schedule.max} min` : "Paused";
+    if (nextRun) {
+      nextRun.textContent = schedule.lastError
+        ? schedule.lastError
+        : schedule.enabled ? `Next run · every ${schedule.min}–${schedule.max} min` : "Paused";
+    }
   }
 
   async function loadFiles() {
@@ -549,7 +583,10 @@
         if (name) name.textContent = "No group selected";
         if (id) id.textContent = "—";
         if (members) members.textContent = "—";
+        const memberList = $(".member-list", group);
+        if (memberList) memberList.innerHTML = `<div class="member-list-head"><span>Members</span></div><div class="empty-state compact"><span>Choose a live conversation.</span></div>`;
       }
+      currentGroupInfo = null;
       $$(".thread").forEach((item) => item.classList.remove("active"));
       return;
     }
@@ -572,6 +609,7 @@
         if (id) id.textContent = thread.id;
         if (members) members.textContent = String(thread.members || "—");
       }
+      await loadThreadInfo(threadID);
       const body = $(".chat-body");
       if (body) {
         body.innerHTML = `<div class="date-separator"><span>Live thread</span></div>${(data.messages || []).map((message) => messageRow(message)).join("")}`;
@@ -580,6 +618,24 @@
       $$(".thread").forEach((item) => item.classList.toggle("active", item.dataset.threadId === threadID));
     } catch (error) {
       toast(error.message, "error");
+    }
+  }
+
+  async function loadThreadInfo(threadID = currentThread) {
+    if (!threadID) return;
+    try {
+      const data = await api(`/api/threads/${encodeURIComponent(threadID)}/info`);
+      currentGroupInfo = data.info || null;
+      const group = $(".group-sidebar");
+      const memberList = $(".member-list", group);
+      if (!memberList) return;
+      const members = currentGroupInfo?.members || [];
+      memberList.innerHTML = `<div class="member-list-head"><span>Members</span><small>${members.length}</small></div>${members.length
+        ? members.slice(0, 40).map((member) => `<button class="member-row" data-group-member="${escapeHtml(member.id)}" title="Change nickname"><span class="avatar tiny blue-avatar">${escapeHtml(String(member.name || "U").slice(0, 2).toUpperCase())}</span><span><strong>${escapeHtml(member.name || member.id)}</strong><code>${escapeHtml(member.id)}</code></span></button>`).join("")
+        : `<div class="empty-state compact"><span>No member details returned by Messenger.</span></div>`}`;
+    } catch (error) {
+      const memberList = $(".member-list", $(".group-sidebar"));
+      if (memberList) memberList.innerHTML = `<div class="member-list-head"><span>Members</span></div><div class="empty-state compact"><span>${escapeHtml(error.message)}</span></div>`;
     }
   }
 
@@ -657,7 +713,7 @@
 
   async function importSession() {
     const payload = $("#cookieInput")?.value.trim();
-    if (!payload) return toast("Paste or choose an appstate JSON file first.", "error");
+    if (!payload) return toast("Paste or choose a session export first.", "error");
     const button = $('[data-action="import"]');
     if (button) button.disabled = true;
     try {
@@ -692,6 +748,23 @@
       if (input) input.value = "";
       await loadThreads();
       toast("Messenger session cleared");
+    } catch (error) {
+      toast(error.message, "error");
+    }
+  }
+
+  async function manageThread(action, payload = {}) {
+    if (!currentThread) return toast("Choose a live conversation first.", "error");
+    try {
+      const data = await api(`/api/threads/${encodeURIComponent(currentThread)}/actions`, {
+        method: "POST",
+        body: JSON.stringify({ action, ...payload }),
+      });
+      syncStatus(data.state);
+      if (action === "rename") await loadThreads();
+      if (action === "mark-read") toast("Conversation marked as read");
+      else if (action === "rename") toast("Conversation renamed");
+      else toast("Messenger group updated");
     } catch (error) {
       toast(error.message, "error");
     }
@@ -832,6 +905,44 @@
     }
     if (target.dataset.action === "clear-session") {
       await clearSession();
+      return;
+    }
+    if (target.dataset.action === "group-info") {
+      await loadThreadInfo();
+      toast("Group information refreshed");
+      return;
+    }
+    if (target.dataset.action === "search-chat") {
+      const query = window.prompt("Search this conversation", "");
+      if (query?.trim()) {
+        const matches = $$(".message-row", $(".chat-body")).filter((row) => row.textContent.toLowerCase().includes(query.toLowerCase()));
+        toast(`${matches.length} matching message${matches.length === 1 ? "" : "s"}`);
+      }
+      return;
+    }
+    if (target.dataset.action === "thread-menu") {
+      const choice = window.prompt("Type rename, read, or add to manage this live conversation.", "");
+      if (choice?.toLowerCase() === "read") await manageThread("mark-read");
+      else if (choice?.toLowerCase() === "rename") {
+        const title = window.prompt("New conversation name", "");
+        if (title) await manageThread("rename", { title });
+      } else if (choice?.toLowerCase() === "add") {
+        const userID = window.prompt("Messenger user ID to add", "");
+        if (userID) await manageThread("add-member", { userID: userID.trim() });
+      }
+      return;
+    }
+    if (target.dataset.groupMember) {
+      const nickname = window.prompt("New nickname for this member", "");
+      if (nickname) await manageThread("nickname", { userID: target.dataset.groupMember, nickname: nickname.trim() });
+      return;
+    }
+    if (target.dataset.action === "attach") {
+      toast("Attachments are not enabled by the current Messenger client.", "error");
+      return;
+    }
+    if (target.dataset.action === "voice") {
+      toast("Voice recording is not available in this browser panel.", "error");
       return;
     }
     if (target.dataset.action === "upload") {
@@ -981,7 +1092,7 @@
     if (!message) return toast("Write a message first", "error");
     try {
       const data = await api("/api/messages", { method: "POST", body: JSON.stringify({ message, threadID: currentThread }) });
-      appendMessage(data.message, "incoming");
+      appendMessage(data.message, "bot");
       composer.value = "";
       composer.style.height = "41px";
       syncStatus(data.state);

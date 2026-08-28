@@ -56,6 +56,11 @@ class MessengerRuntime {
     this.error = "";
     this.connectedAt = null;
     this.startPromise = null;
+    this.clientPackage = "";
+    this.reconnectTimer = null;
+    this.healthTimer = null;
+    this.reconnectAttempts = 0;
+    this.stoppedByUser = false;
   }
 
   snapshot() {
@@ -66,6 +71,8 @@ class MessengerRuntime {
       userID: this.currentUserID || null,
       connectedAt: this.connectedAt,
       error: this.error || null,
+      client: this.clientPackage || null,
+      reconnectAttempts: this.reconnectAttempts,
     };
   }
 
@@ -88,11 +95,20 @@ class MessengerRuntime {
   async start(appState = null) {
     if (this.startPromise) return this.startPromise;
     if (this.status === "connected") return this.snapshot();
+    this.stoppedByUser = false;
     this.startPromise = (async () => {
       let login;
-      try {
-        login = require("@dongdev/fca-unofficial");
-      } catch {
+      const candidates = ["@dongdev/fca-unofficial", "@xaviabot/fca-unofficial", "fca-prjvt"];
+      for (const candidate of candidates) {
+        try {
+          login = require(candidate);
+          this.clientPackage = candidate;
+          break;
+        } catch {
+          // Try the next compatible client before reporting the dependency error.
+        }
+      }
+      if (!login) {
         this.setStatus("dependency-missing", "Messenger client package is not installed.");
         return this.snapshot();
       }
@@ -115,7 +131,7 @@ class MessengerRuntime {
               this.currentUserID = String(api.getCurrentUserID?.() || "");
               this.listener = api.listenMqtt?.((listenError, event) => {
                 if (listenError) {
-                  this.onLog?.("WARN", "Messenger listener error", "transport=mqtt");
+                  this.handleTransportError(listenError);
                   return;
                 }
                 const message = normalizeEvent(event, this.currentUserID);
@@ -128,7 +144,9 @@ class MessengerRuntime {
           });
         });
         this.connectedAt = Date.now();
+        this.reconnectAttempts = 0;
         this.setStatus("connected");
+        this.startHealthMonitor();
         this.onLog?.("OK", "Messenger session connected", this.currentUserID ? `user=${this.currentUserID}` : "");
       } catch (error) {
         this.api = null;
@@ -145,6 +163,8 @@ class MessengerRuntime {
   }
 
   async stop() {
+    this.stoppedByUser = true;
+    this.clearTimers();
     const api = this.api;
     this.api = null;
     this.listener = null;
@@ -158,6 +178,52 @@ class MessengerRuntime {
     this.setStatus(fs.existsSync(this.appStatePath) ? "stopped" : "no-session");
     this.onLog?.("WARN", "Messenger bridge stopped");
     return this.snapshot();
+  }
+
+  clearTimers() {
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+    if (this.healthTimer) clearInterval(this.healthTimer);
+    this.reconnectTimer = null;
+    this.healthTimer = null;
+  }
+
+  startHealthMonitor() {
+    if (this.healthTimer) clearInterval(this.healthTimer);
+    this.healthTimer = setInterval(async () => {
+      if (this.status !== "connected" || typeof this.api?.getThreadList !== "function") return;
+      try {
+        await callbackCall(this.api.getThreadList.bind(this.api), [1, null, ["INBOX"]]);
+      } catch (error) {
+        this.handleTransportError(error);
+      }
+    }, 90_000);
+    this.healthTimer.unref?.();
+  }
+
+  handleTransportError(error) {
+    const detail = String(error?.message || error || "transport unavailable").slice(0, 180);
+    this.onLog?.("WARN", "Messenger transport degraded", `transport=mqtt · ${detail}`);
+    if (this.status === "connected") {
+      this.connectedAt = null;
+      this.setStatus("offline", "Messenger transport stopped responding.");
+    }
+    this.scheduleReconnect();
+  }
+
+  scheduleReconnect() {
+    if (this.stoppedByUser || !fs.existsSync(this.appStatePath) || this.reconnectTimer) return;
+    if (this.reconnectAttempts >= 5) {
+      this.setStatus("offline", "Automatic reconnect paused after 5 attempts. Use Connect session to retry.");
+      return;
+    }
+    this.reconnectAttempts += 1;
+    const delay = Math.min(60_000, 2_000 * (2 ** (this.reconnectAttempts - 1)));
+    this.onLog?.("INFO", "Messenger reconnect scheduled", `attempt=${this.reconnectAttempts} · delay=${Math.round(delay / 1000)}s`);
+    this.reconnectTimer = setTimeout(async () => {
+      this.reconnectTimer = null;
+      await this.start();
+    }, delay);
+    this.reconnectTimer.unref?.();
   }
 
   getThreads() {
@@ -174,6 +240,48 @@ class MessengerRuntime {
     if (this.status !== "connected" || typeof this.api?.getThreadHistory !== "function") return [];
     return callbackCall(this.api.getThreadHistory.bind(this.api), [threadID, limit, null])
       .then((messages) => (Array.isArray(messages) ? messages.map((event) => normalizeEvent({ ...event, threadID }, this.currentUserID)).filter(Boolean).reverse() : []));
+  }
+
+  getThreadInfo(threadID) {
+    if (this.status !== "connected" || typeof this.api?.getThreadInfo !== "function") {
+      return Promise.reject(new Error("Connect a valid Messenger session before loading group information."));
+    }
+    return callbackCall(this.api.getThreadInfo.bind(this.api), [String(threadID)]);
+  }
+
+  markRead(threadID) {
+    if (this.status !== "connected" || typeof this.api?.markAsRead !== "function") {
+      return Promise.reject(new Error("Connect a valid Messenger session before marking a thread read."));
+    }
+    return callbackCall(this.api.markAsRead.bind(this.api), [String(threadID)]);
+  }
+
+  setThreadTitle(threadID, title) {
+    if (this.status !== "connected" || typeof this.api?.setTitle !== "function") {
+      return Promise.reject(new Error("This Messenger client cannot rename threads."));
+    }
+    return callbackCall(this.api.setTitle.bind(this.api), [String(title), String(threadID)]);
+  }
+
+  setNickname(threadID, userID, nickname) {
+    if (this.status !== "connected" || typeof this.api?.changeNickname !== "function") {
+      return Promise.reject(new Error("This Messenger client cannot change nicknames."));
+    }
+    return callbackCall(this.api.changeNickname.bind(this.api), [String(nickname), String(threadID), String(userID)]);
+  }
+
+  addMember(threadID, userID) {
+    if (this.status !== "connected" || typeof this.api?.addUserToGroup !== "function") {
+      return Promise.reject(new Error("This Messenger client cannot add members."));
+    }
+    return callbackCall(this.api.addUserToGroup.bind(this.api), [String(userID), String(threadID)]);
+  }
+
+  removeMember(threadID, userID) {
+    if (this.status !== "connected" || typeof this.api?.removeUserFromGroup !== "function") {
+      return Promise.reject(new Error("This Messenger client cannot remove members."));
+    }
+    return callbackCall(this.api.removeUserFromGroup.bind(this.api), [String(userID), String(threadID)]);
   }
 
   sendMessage(threadID, body) {

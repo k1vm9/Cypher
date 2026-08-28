@@ -1,0 +1,1 @@
+- [Messenger runtime dependency](messenger-runtime-dependency.md) — legacy FCA clients may be blocked by the package firewall; keep live Messenger optional and report dependency state honestly.
