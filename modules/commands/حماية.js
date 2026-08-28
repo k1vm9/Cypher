@@ -1,8 +1,22 @@
 const fs = require("fs"),
   path = __dirname + "/cache/namebox.json";
 
+function readProtectionData() {
+  try {
+    const value = JSON.parse(fs.readFileSync(path, "utf8"));
+    return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeProtectionData(data) {
+  fs.mkdirSync(__dirname + "/cache", { recursive: true });
+  fs.writeFileSync(path, JSON.stringify(data, null, 2));
+}
+
 module.exports.config = {
-name: "اسم-المجموعه",
+name: "اسم",
 version: "1.0.8",
 hasPermssion: 0,
 credits: "نوت دفاين",
@@ -17,28 +31,31 @@ module.exports.languages = {
 "en": {}
 };
 module.exports.onLoad = () => {   
-if (!fs.existsSync(path)) fs.writeFileSync(path, JSON.stringify({}));
+ fs.mkdirSync(__dirname + "/cache", { recursive: true });
+ if (!fs.existsSync(path)) writeProtectionData({});
 };
 
 module.exports.handleEvent = async function ({ api, event, Threads, permssion }) {
 const { threadID, messageID, senderID, isGroup, author } = event;
 
 if (isGroup == true) {
-let data = JSON.parse(fs.readFileSync(path))
-let dataThread = (await Threads.getData(threadID)).threadInfo
+ let data = readProtectionData()
+ let dataThread = (await Threads.getData(threadID)).threadInfo
+ if (!dataThread) return
 const threadName = dataThread.threadName;
 if (!data[threadID]) {
 data[threadID] = {
 namebox: threadName,
+   // Name protection is deliberately off for newly discovered groups.
 status: false
 }
-fs.writeFileSync(path, JSON.stringify(data, null, 2));
+writeProtectionData(data);
 }
 if (data[threadID].namebox == null || threadName == "undefined" || threadName == null) return
 
 else if (threadName != data[threadID].namebox && data[threadID].status == false) {
 data[threadID].namebox = threadName
-fs.writeFileSync(path, JSON.stringify(data, null, 2));
+ writeProtectionData(data);
 }
 
 if (threadName != data[threadID].namebox && data[threadID].status == true) {
@@ -56,9 +73,14 @@ return api.setTitle(
 module.exports.run = async function ({ api, event, permssion, Threads }) {
 const { threadID, messageID } = event;
 if (permssion == 0) return api.sendMessage("قم بي تشغيل/ايقاف", threadID);
-let data = JSON.parse(fs.readFileSync(path))
+let data = readProtectionData()
 let dataThread = (await Threads.getData(threadID)).threadInfo
+if (!dataThread) return api.sendMessage("تعذر العثور على بيانات المجموعة", threadID);
 const threadName = dataThread.threadName;
+
+if (!data[threadID]) {
+  data[threadID] = { namebox: threadName, status: false };
+}
 
 if (data[threadID].status == false) {
    data[threadID] = {
@@ -66,7 +88,7 @@ if (data[threadID].status == false) {
      status: true
    }
 } else data[threadID].status = false
-     fs.writeFileSync(path, JSON.stringify(data, null, 2));
+      writeProtectionData(data);
       api.sendMessage(
     `بلفعل تم ${data[threadID].status == true ? `تشغيل` : `ايقاف`} وضع حماية اسم المجموعة`,
  threadID)

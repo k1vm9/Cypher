@@ -17,7 +17,6 @@ const {
   unlinkSync,
 } = require('fs-extra');
 const { join, resolve } = require('path');
-const { execSync }   = require('child_process');
 const logger         = require('./utils/log.js');
 const login          = require('@dongdev/fca-unofficial');
 const axios          = require('axios');
@@ -197,8 +196,11 @@ function onBot({ models }) {
           if (global.client.commands.has(cmd.config.name || ''))
             throw new Error(global.getText('utils', 'nameExist'));
 
-          // Install command npm dependencies if needed
+          // Resolve declared dependencies from the installed environment only.
+          // Never run npm from a message-bot process: package names and versions
+          // are command-controlled input and runtime installation is unsafe.
           if (cmd.config.dependencies && typeof cmd.config.dependencies === 'object') {
+            let missingDependency = false;
             for (const pkg in cmd.config.dependencies) {
               const localPath = join(__dirname, 'node_modules', 'nodemodule', pkg);
               try {
@@ -213,29 +215,12 @@ function onBot({ models }) {
                   global.getText('utils', 'notFoundPackage', pkg, cmd.config.name),
                   'warn'
                 );
-                execSync(
-                  'npm --package-lock false --save install ' + pkg +
-                    (cmd.config.dependencies[pkg] === '*' || cmd.config.dependencies[pkg] === ''
-                      ? ''
-                      : '@' + cmd.config.dependencies[pkg]),
-                  {
-                    stdio: 'inherit',
-                    env: process.env,
-                    shell: true,
-                    cwd: join(__dirname, 'node_modules'),
-                  }
-                );
-                for (let attempt = 1; attempt <= 3; attempt++) {
-                  try {
-                    require.cache = {};
-                    if (listPackage.hasOwnProperty(pkg) || listbuiltinModules.includes(pkg))
-                      global.nodemodule[pkg] = require(pkg);
-                    else
-                      global.nodemodule[pkg] = require(localPath);
-                    break;
-                  } catch (_) {}
-                }
+                missingDependency = true;
               }
+            }
+            if (missingDependency) {
+              logger('Skipping command [' + file + '] because a declared dependency is not installed.', 'WARN');
+              continue;
             }
           }
 
@@ -304,28 +289,8 @@ function onBot({ models }) {
                   global.getText('utils', 'notFoundPackage', pkg, evt.config.name),
                   'warn'
                 );
-                execSync(
-                  'npm --package-lock false --save install ' + pkg +
-                    (evt.config.dependencies[pkg] === '*' || evt.config.dependencies[pkg] === ''
-                      ? ''
-                      : '@' + evt.config.dependencies[pkg]),
-                  {
-                    stdio: 'inherit',
-                    env: process.env,
-                    shell: true,
-                    cwd: join(__dirname, 'node_modules'),
-                  }
-                );
-                for (let attempt = 1; attempt <= 3; attempt++) {
-                  try {
-                    require.cache = {};
-                    if (listPackage.hasOwnProperty(pkg) || listbuiltinModules.includes(pkg))
-                      global.nodemodule[pkg] = require(pkg);
-                    else
-                      global.nodemodule[pkg] = require(localPath);
-                    break;
-                  } catch (_) {}
-                }
+                logger('Skipping event [' + file + '] because dependency "' + pkg + '" is not installed.', 'WARN');
+                continue;
               }
             }
           }
