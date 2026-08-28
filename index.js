@@ -625,7 +625,6 @@ function parseSessionPayload(payload) {
   let cookies = Array.isArray(parsed) ? parsed
     : parsed && Array.isArray(parsed.cookies) ? parsed.cookies
       : parsed && typeof parsed === "object" ? Object.entries(parsed)
-        .filter(([key]) => ["c_user", "xs", "fr", "wd", "datr", "sb", "m_sess", "spin"].includes(key))
         .map(([key, value]) => ({ key, value }))
         : null;
   if (!cookies && raw.includes("=")) {
@@ -638,7 +637,7 @@ function parseSessionPayload(payload) {
   const deduped = new Map();
   for (const cookie of cookies) {
     if (!cookie || typeof cookie !== "object") throw new Error("Every session cookie must be an object.");
-    const key = String(cookie.key || cookie.name || "").trim();
+    const key = String(cookie.key || cookie.name || cookie.keyName || "").trim();
     const value = String(cookie.value ?? "").trim();
     if (!key || !value) throw new Error("Every session cookie needs a key and value.");
     deduped.set(key, {
@@ -651,6 +650,7 @@ function parseSessionPayload(payload) {
       secure: cookie.secure !== false,
       session: Boolean(cookie.session),
       ...(Number.isFinite(Number(cookie.expirationDate)) ? { expirationDate: Number(cookie.expirationDate) } : {}),
+      ...(cookie.expires ? { expires: String(cookie.expires).slice(0, 80) } : {}),
     });
   }
   const normalized = [...deduped.values()];
@@ -678,6 +678,15 @@ messengerRuntime = new MessengerRuntime({
 });
 state.status = messengerRuntime.snapshot().status;
 addLog("INFO", "Cypher dashboard started", `session=${messengerRuntime.snapshot().hasSession ? "stored" : "none"}`);
+
+if (messengerRuntime.snapshot().hasSession) {
+  void messengerRuntime.start().then((session) => {
+    if (!session.connected) mutateAndBroadcast();
+  }).catch((error) => {
+    addLog("ERROR", "Messenger startup connection failed", String(error.message || error).slice(0, 180));
+    mutateAndBroadcast();
+  });
+}
 
 async function handleApi(request, response, requestUrl) {
   const { pathname, searchParams } = requestUrl;

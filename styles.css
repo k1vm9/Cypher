@@ -539,7 +539,7 @@ body.light .code-area, body.light .code-editor, body.light .code-preview, body.l
   .log-lines { font-size: 9px; }
   .log-lines > div { grid-template-columns: 57px 34px 1fr; gap: 6px; }
   .log-lines em { display: block; }
-  .mobile-nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: grid; grid-template-columns: repeat(5, 1fr); height: 65px; padding: 7px 10px max(7px, env(safe-area-inset-bottom)); border-top: 1px solid var(--border); background: rgba(10,13,18,.92); backdrop-filter: blur(20px); }
+  .mobile-nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: grid; grid-template-columns: repeat(6, 1fr); height: 65px; padding: 7px 10px max(7px, env(safe-area-inset-bottom)); border-top: 1px solid var(--border); background: rgba(10,13,18,.92); backdrop-filter: blur(20px); }
   .mobile-nav button { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--muted); background: transparent; font-size: 9px; }
   .mobile-nav button svg { width: 17px; height: 17px; }
   .mobile-nav button.active { color: var(--red-bright); }

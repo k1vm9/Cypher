@@ -52,6 +52,21 @@
     "Home": "الرئيسية",
     "Messenger": "مسنجر",
     "Cookies": "ملفات الارتباط",
+    "Connected": "متصل",
+    "Connected to Messenger": "متصل بمسنجر",
+    "Connecting to Messenger…": "جارٍ الاتصال بمسنجر…",
+    "Session stored but not connected": "الجلسة محفوظة ولكنها غير متصلة",
+    "Session stored": "الجلسة محفوظة",
+    "Connection stopped": "تم إيقاف الاتصال",
+    "Stopped": "متوقف",
+    "Auth error": "خطأ في المصادقة",
+    "Dependency missing": "اعتمادية مفقودة",
+    "Offline": "غير متصل",
+    "Messenger rejected this session": "رفض مسنجر هذه الجلسة",
+    "Messenger client is not installed": "عميل مسنجر غير مثبت",
+    "Messenger connection is offline": "اتصال مسنجر غير متصل",
+    "Session data is stored locally; values are never shown.": "بيانات الجلسة محفوظة محلياً ولا تظهر القيم أبداً.",
+    "Messenger client unavailable until its dependency is installed": "عميل مسنجر غير متاح حتى تثبيت الاعتمادية المطلوبة",
     "Activation": "التفعيل",
     "Editor": "المحرر",
     "Protection": "الحماية",
@@ -262,11 +277,16 @@
       if (element.tagName === "SCRIPT" || element.tagName === "STYLE" || element.tagName === "TEXTAREA" || element.tagName === "PRE") return;
       element.childNodes.forEach((node) => {
         if (node.nodeType !== Node.TEXT_NODE || !node.nodeValue.trim()) return;
-        const source = node.__cypherLanguageSource || node.nodeValue.trim();
+        const raw = node.nodeValue.trim();
+        const source = node.__cypherLanguageSource && raw === node.__cypherLanguageRendered
+          ? node.__cypherLanguageSource
+          : raw;
         node.__cypherLanguageSource = source;
         const leading = node.nodeValue.match(/^\s*/)?.[0] || "";
         const trailing = node.nodeValue.match(/\s*$/)?.[0] || "";
-        node.nodeValue = `${leading}${currentLanguage === "ar" ? (arabicTranslations[source] || source) : source}${trailing}`;
+        const translated = currentLanguage === "ar" ? (arabicTranslations[source] || source) : source;
+        node.nodeValue = `${leading}${translated}${trailing}`;
+        node.__cypherLanguageRendered = translated;
       });
     });
     const translatableAttributes = ["placeholder", "aria-label", "title"];
@@ -274,9 +294,16 @@
       translatableAttributes.forEach((attribute) => {
         if (!element.hasAttribute(attribute)) return;
         const sourceAttribute = `data-cypher-${attribute.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-source`;
-        const source = element.getAttribute(sourceAttribute) || element.getAttribute(attribute);
+        const renderedAttribute = `data-cypher-${attribute.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-rendered`;
+        const currentAttribute = element.getAttribute(attribute);
+        const previousRendered = element.getAttribute(renderedAttribute);
+        const source = element.getAttribute(sourceAttribute) && currentAttribute === previousRendered
+          ? element.getAttribute(sourceAttribute)
+          : currentAttribute;
         element.setAttribute(sourceAttribute, source);
-        element.setAttribute(attribute, currentLanguage === "ar" ? (arabicTranslations[source] || source) : source);
+        const translated = currentLanguage === "ar" ? (arabicTranslations[source] || source) : source;
+        element.setAttribute(attribute, translated);
+        element.setAttribute(renderedAttribute, translated);
       });
     });
     const toggle = $("#languageToggle");
@@ -467,6 +494,7 @@
       stopped: "Connection stopped",
       "auth-error": "Messenger rejected this session",
       "dependency-missing": "Messenger client is not installed",
+      offline: "Messenger connection is offline",
     };
     const statusNode = $("#sessionStatus");
     if (statusNode) {
@@ -1035,6 +1063,7 @@
         toast(error.message || "Choose a valid session file.", "error");
       }
     });
+    picker.addEventListener("cancel", () => picker.remove());
     picker.click();
   }
 

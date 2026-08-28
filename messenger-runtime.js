@@ -85,8 +85,12 @@ class MessengerRuntime {
   readAppState() {
     try {
       const value = JSON.parse(fs.readFileSync(this.appStatePath, "utf8"));
-      if (!Array.isArray(value) || !value.length) throw new Error("Session file must contain a non-empty cookie array.");
-      return value;
+      const cookies = Array.isArray(value) ? value
+        : Array.isArray(value?.cookies) ? value.cookies
+          : value && typeof value === "object" ? Object.entries(value).map(([key, cookieValue]) => ({ key, value: cookieValue }))
+            : null;
+      if (!cookies?.length) throw new Error("Session file must contain a non-empty cookie array.");
+      return cookies;
     } catch (error) {
       throw new Error(`Unable to read session file: ${error.message}`);
     }
@@ -123,7 +127,11 @@ class MessengerRuntime {
       this.onLog?.("INFO", "Connecting to Messenger", "transport=fca");
       try {
         await new Promise((resolve, reject) => {
-          login({ appState: cookies }, (error, api) => {
+          const loginOptions = {
+            appState: cookies,
+            forceLogin: false,
+          };
+          login(loginOptions, (error, api) => {
             if (error) return reject(error);
             if (!api) return reject(new Error("Messenger client returned no API."));
             this.api = api;
