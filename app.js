@@ -91,6 +91,9 @@
     if (silentChip) silentChip.innerHTML = `<span class="status-dot ${data.settings?.silentMode ? "amber" : "online"}"></span> Silent ${data.settings?.silentMode ? "on" : "off"}`;
     const statusSummary = $("#veilStatusSummary");
     if (statusSummary) statusSummary.textContent = `${data.activeProtectionCount || 0}/${data.protectionCount || 20} safety layers active`;
+    if (data.messages) renderMessages(data.messages);
+    if (data.logs) renderLogs(data.logs);
+    if (data.schedules) renderSchedules(data.schedules);
     $$(".toggle[data-setting]").forEach((toggle) => {
       toggle.classList.toggle("active", Boolean(data.settings?.[toggle.dataset.setting]));
     });
@@ -128,6 +131,8 @@
       renderLogs(status.logs || []);
       renderMessages(status.messages || []);
       injectVeilFeatures();
+      wirePanelControls();
+      renderSchedules(status.schedules || []);
       await loadThreads();
       await loadFiles();
       await loadAdmins();
@@ -162,6 +167,7 @@
   function appendLog(log) {
     const lines = $("#logLines");
     if (!lines || !log) return;
+    $(".log-empty", lines)?.remove();
     const row = document.createElement("div");
     const level = String(log.level || "INFO").toLowerCase();
     row.innerHTML = `<time>${escapeHtml(log.time || "")}</time><b class="${level}">${escapeHtml(log.level || "INFO")}</b><span>${escapeHtml(log.text || "")} <em>${escapeHtml(log.meta || "")}</em></span>`;
@@ -193,8 +199,10 @@
         "save-message": "Automatic message schedule saved",
       };
       toast(messages[action] || "Action completed");
+      return data;
     } catch (error) {
       toast(error.message, "error");
+      return null;
     } finally {
       if (button) button.disabled = false;
     }
@@ -250,25 +258,63 @@
 
   function renderLogs(logs) {
     const lines = $("#logLines");
-    if (!lines || !logs.length) return;
+    if (!lines) return;
     lines.innerHTML = "";
-    logs.slice(0, 100).reverse().forEach(appendLog);
+    if (logs.length) logs.slice(0, 100).reverse().forEach(appendLog);
+    else lines.innerHTML = `<div class="log-empty">No log entries yet.</div>`;
   }
 
   function renderMessages(messages) {
     const table = $(".data-table", $("#panel-messages"));
-    if (!table || !messages.length) return;
+    if (!table) return;
     const head = $(".table-head", table);
     table.innerHTML = head ? head.outerHTML : "";
+    if (!messages.length) {
+      table.insertAdjacentHTML("beforeend", `<div class="table-empty">No message events yet.</div>`);
+    }
     messages.slice(0, 50).forEach((message) => {
-      const thread = message.threadID === "thread_9204" ? "Design Systems" : "Nightwatch Ops";
+      const thread = message.threadID === "thread_9204" ? "Design Systems"
+        : message.threadID === "thread_1920" ? "AI Lab / prompts"
+          : message.threadID === "thread_4402" ? "Ops Control" : "Nightwatch Ops";
       const row = document.createElement("div");
       row.className = "table-row";
-      row.innerHTML = `<span class="person"><span class="avatar tiny blue-avatar">ME</span>${escapeHtml(message.sender || "You")}</span><span>${thread}</span><span>${escapeHtml(String(message.content || "").slice(0, 48))}</span><time>${escapeHtml(message.time || "")}</time><span class="status-label enabled">Queued</span>`;
+      const status = String(message.status || "Processed");
+      row.innerHTML = `<span class="person"><span class="avatar tiny blue-avatar">ME</span>${escapeHtml(message.sender || "You")}</span><span>${thread}</span><span>${escapeHtml(String(message.content || "").slice(0, 48))}</span><time>${escapeHtml(message.time || "")}</time><span class="status-label enabled">${escapeHtml(status)}</span>`;
       table.appendChild(row);
     });
     const count = $(".table-count", $("#panel-messages"));
-    if (count) count.textContent = `${messages.length} events`;
+    if (count) count.textContent = `${messages.length} event${messages.length === 1 ? "" : "s"}`;
+    const preview = $(".message-preview-card");
+    if (preview) {
+      const content = messages.length
+        ? messages.slice(0, 3).map((message) => `<div class="message-preview-row"><span class="avatar tiny blue-avatar">${escapeHtml(String(message.sender || "U").slice(0, 2).toUpperCase())}</span><span><strong>${escapeHtml(message.sender || "Unknown")}</strong><small>${escapeHtml(String(message.content || "").slice(0, 72))}</small></span><time>${escapeHtml(message.time || "")}</time></div>`).join("")
+        : `<div class="empty-state compact"><div class="empty-icon">${icon("eye")}</div><strong>No messages yet</strong><span>New activity will appear here in real time.</span></div>`;
+      const existing = $(".empty-state, .message-preview-list", preview);
+      if (existing) {
+        existing.outerHTML = `<div class="message-preview-list">${content}</div>`;
+      } else {
+        preview.insertAdjacentHTML("beforeend", `<div class="message-preview-list">${content}</div>`);
+      }
+    }
+  }
+
+  function renderSchedules(schedules) {
+    const card = $("[data-automation='messages']");
+    if (!card) return;
+    const schedule = schedules.find((item) => item.id === "automatic-message") || schedules[0];
+    const toggle = $("[data-schedule-toggle]", card);
+    if (toggle) toggle.classList.toggle("active", Boolean(schedule?.enabled));
+    if (!schedule) return;
+    card.dataset.scheduleId = schedule.id;
+    const select = $("select", card);
+    const message = $(".text-area", card);
+    const fields = $$("input", card);
+    if (select) select.value = schedule.threadID;
+    if (message && document.activeElement !== message) message.value = schedule.message || "";
+    if (fields[0] && document.activeElement !== fields[0]) fields[0].value = schedule.min;
+    if (fields[1] && document.activeElement !== fields[1]) fields[1].value = schedule.max;
+    const nextRun = $(".next-run", card);
+    if (nextRun) nextRun.textContent = schedule.enabled ? `Next run · every ${schedule.min}–${schedule.max} min` : "Paused";
   }
 
   async function loadFiles() {
@@ -307,6 +353,9 @@
       if (title) title.textContent = filePath.split("/").pop();
       if (meta) meta.textContent = `${filePath} · ${data.size} bytes`;
       if (preview) preview.textContent = data.content;
+      if (preview) preview.dataset.filePath = filePath;
+      const save = $('[data-action="save-file"]', $("#panel-files"));
+      if (save) save.dataset.filePath = filePath;
       $$(".file-row", $("#panel-files")).forEach((row) => row.classList.toggle("active", row.dataset.filePath === filePath));
     } catch (error) {
       toast(error.message, "error");
@@ -435,6 +484,24 @@
     }
   }
 
+  function wirePanelControls() {
+    const automationCards = $$(".automation-card");
+    const messageCard = automationCards[0];
+    if (messageCard) {
+      messageCard.dataset.automation = "messages";
+      $("[aria-label='Toggle automatic messages']", messageCard)?.setAttribute("data-schedule-toggle", "automatic-message");
+    }
+    const nameCard = automationCards[1];
+    if (nameCard) {
+      $$("[aria-label*='group name locking'], [aria-label*='auto-restore']", nameCard)
+        .forEach((toggle) => toggle.setAttribute("data-protection", "nameProtection"));
+    }
+    const filePanel = $("#panel-files");
+    const fileSave = $('[data-action="save"]', filePanel);
+    if (fileSave) fileSave.dataset.action = "save-file";
+    $(".code-preview", filePanel)?.setAttribute("contenteditable", "true");
+  }
+
   async function generateImage(button) {
     const prompt = $("#imagePrompt")?.value.trim();
     if (!prompt) return toast("Describe the image you want to create.", "error");
@@ -478,7 +545,7 @@
       const title = $(".code-heading span:first-child", $("#panel-editor"));
       if (title) title.innerHTML = `${icon("code")} ${escapeHtml(file)}`;
       toast(data.readonly ? "Veil source opened read-only" : "Cypher source opened in editor");
-      const save = $('[data-action="save-command"]');
+      const save = $('#panel-editor [data-action="save"]');
       if (save) save.dataset.commandFile = file;
     } catch (error) {
       toast(error.message, "error");
@@ -589,6 +656,15 @@
       picker.click();
       return;
     }
+    if (target.dataset.scheduleToggle) {
+      target.classList.toggle("active");
+      const result = await runAction("schedule-toggle", target, {
+        id: target.closest("[data-automation]")?.dataset.scheduleId || target.dataset.scheduleToggle,
+        enabled: target.classList.contains("active"),
+      });
+      if (!result) target.classList.toggle("active");
+      return;
+    }
     if (target.dataset.action === "save" && target.dataset.commandFile) {
       const editor = $(".code-editor", $("#panel-editor"));
       try {
@@ -599,17 +675,69 @@
       }
       return;
     }
+    if (target.dataset.action === "save-file") {
+      const preview = $(".code-preview", $("#panel-files"));
+      const filePath = target.dataset.filePath || preview?.dataset.filePath;
+      if (!filePath || !preview) return toast("Select a file before saving.", "error");
+      try {
+        await api("/api/files/write", {
+          method: "POST",
+          body: JSON.stringify({ path: filePath, content: preview.textContent || "" }),
+        });
+        toast("Workspace file saved");
+      } catch (error) {
+        toast(error.message, "error");
+      }
+      return;
+    }
+    if (target.dataset.action === "save" && target.closest("#panel-settings")) {
+      const panel = target.closest("#panel-settings");
+      const inputs = $$("input", panel);
+      try {
+        const data = await api("/api/settings", {
+          method: "POST",
+          body: JSON.stringify({
+            botName: inputs[0]?.value,
+            prefix: inputs[1]?.value,
+          }),
+        });
+        syncStatus(data.state);
+        toast("Settings saved");
+      } catch (error) {
+        toast(error.message, "error");
+      }
+      return;
+    }
+    if (target.dataset.action === "save" && target.closest("#panel-activation")) {
+      const activeMode = $(".segmented button.active", target.closest("#panel-activation"))?.textContent.trim().toLowerCase();
+      try {
+        const data = await api("/api/settings", {
+          method: "POST",
+          body: JSON.stringify({ activationMode: activeMode === "blacklist" ? "blacklist" : "whitelist" }),
+        });
+        syncStatus(data.state);
+        toast("Activation settings saved");
+      } catch (error) {
+        toast(error.message, "error");
+      }
+      return;
+    }
     if (target.dataset.action === "save-message") {
       const card = target.closest(".automation-card");
       const fields = $$("input", card);
       await runAction("save-message", target, {
         schedule: {
-          threadID: "thread_8841",
+          id: card.dataset.scheduleId || "automatic-message",
+          threadID: $("select", card)?.value || "thread_8841",
           message: $(".text-area", card)?.value || "",
           min: fields[0]?.value || 30,
           max: fields[1]?.value || 60,
         },
       });
+      return;
+    }
+    if (target.closest(".segmented")) {
+      $$(".segmented button", target.closest(".segmented")).forEach((button) => button.classList.toggle("active", button === target));
       return;
     }
     if (target.dataset.action && !target.classList.contains("toggle")) {

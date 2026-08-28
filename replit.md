@@ -13,4 +13,5 @@ The project serves the Cypher control dashboard from the Node launcher. The dash
 ## Notes
 
 - The launcher uses Node's built-in HTTP and file APIs so the dashboard can start even when the imported bot-only dependencies are unavailable.
+- Dashboard settings, schedules, operator lists, and live activity are persisted in the ignored `.cypher-dashboard-state.json` file created at runtime.
 - Do not place session cookies or API keys in chat. Keep sensitive configuration in the workspace secrets/configuration flow.

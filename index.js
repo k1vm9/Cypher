@@ -17,6 +17,7 @@ const { URL } = require("url");
 
 const ROOT = __dirname;
 const CONFIG_PATH = path.join(ROOT, "config.json");
+const DASHBOARD_STATE_PATH = path.join(ROOT, ".cypher-dashboard-state.json");
 const COMMAND_DIR = path.join(ROOT, "modules", "commands");
 const VEIL_COMMAND_DIR = path.join(ROOT, "Veil2.0-main", "src", "commands");
 const PORT = Number(process.env.PORT) || 2006;
@@ -84,7 +85,14 @@ const state = {
     activationMode: "whitelist",
   },
   protections: Object.fromEntries(veilProtectionNames.map(([id, , , enabled]) => [id, enabled])),
-  schedules: [],
+  schedules: [{
+    id: "automatic-message",
+    threadID: "thread_8841",
+    message: "Daily operations check-in: all systems are healthy.",
+    min: 30,
+    max: 60,
+    enabled: true,
+  }],
   admins: {
     owner: [String(readConfig().YASSIN || "")].filter((id) => /^[0-9]{4,32}$/.test(id)),
     super: (Array.isArray(readConfig().FACEBOOK_ADMIN) ? readConfig().FACEBOOK_ADMIN : [readConfig().FACEBOOK_ADMIN]).map(String).filter((id) => /^[0-9]{4,32}$/.test(id)),
@@ -114,6 +122,69 @@ function readConfig() {
   } catch {
     return {};
   }
+}
+
+function loadDashboardState() {
+  try {
+    const saved = JSON.parse(fs.readFileSync(DASHBOARD_STATE_PATH, "utf8"));
+    if (!saved || typeof saved !== "object") return;
+    if (saved.settings && typeof saved.settings === "object") updateSettings(saved.settings);
+    if (saved.protections && typeof saved.protections === "object") {
+      for (const [id, enabled] of Object.entries(saved.protections)) {
+        if (Object.prototype.hasOwnProperty.call(state.protections, id)) state.protections[id] = Boolean(enabled);
+      }
+    }
+    if (Array.isArray(saved.schedules)) state.schedules = saved.schedules.slice(0, 100);
+    if (saved.admins && typeof saved.admins === "object") {
+      for (const role of Object.keys(state.admins)) {
+        if (Array.isArray(saved.admins[role])) {
+          state.admins[role] = saved.admins[role].map(String).filter((id) => /^[0-9]{4,32}$/.test(id)).slice(0, 100);
+        }
+      }
+    }
+    if (Array.isArray(saved.messages)) state.messages = saved.messages.slice(0, 100);
+    if (saved.threadMessages && typeof saved.threadMessages === "object") {
+      for (const thread of state.threads) {
+        if (Array.isArray(saved.threadMessages[thread.id])) {
+          state.threadMessages[thread.id] = saved.threadMessages[thread.id].slice(-100);
+        }
+      }
+    }
+  } catch {
+    // A missing or incomplete dashboard state is expected on first launch.
+  }
+}
+
+function persistDashboardState() {
+  const payload = {
+    settings: state.settings,
+    protections: state.protections,
+    schedules: state.schedules,
+    admins: state.admins,
+    messages: state.messages.slice(0, 100),
+    threadMessages: state.threadMessages,
+  };
+  const temporaryPath = `${DASHBOARD_STATE_PATH}.tmp`;
+  try {
+    fs.writeFileSync(temporaryPath, JSON.stringify(payload, null, 2), { encoding: "utf8", mode: 0o600 });
+    fs.renameSync(temporaryPath, DASHBOARD_STATE_PATH);
+  } catch (error) {
+    try { fs.rmSync(temporaryPath, { force: true }); } catch {}
+    console.error(`[Cypher] Unable to persist dashboard state: ${error.message}`);
+  }
+}
+
+loadDashboardState();
+
+if (!state.messages.length) {
+  state.messages = Object.values(state.threadMessages).flat().map((message) => ({
+    id: message.id,
+    sender: message.sender,
+    content: message.content,
+    time: message.time,
+    status: "Processed",
+    threadID: Object.entries(state.threadMessages).find(([, messages]) => messages.includes(message))?.[0] || "thread_8841",
+  })).slice(0, 100);
 }
 
 function publicState() {
@@ -312,6 +383,7 @@ function broadcast(event, data) {
 }
 
 function mutateAndBroadcast() {
+  persistDashboardState();
   broadcast("state-update", publicState());
 }
 
@@ -557,6 +629,7 @@ async function handleApi(request, response, requestUrl) {
       state.admins[role] = state.admins[role].filter((item) => item !== id);
       addLog("WARN", "Operator access removed", `role=${role}`);
     }
+    mutateAndBroadcast();
     sendJson(response, 200, { ok: true, admins: state.admins });
     return true;
   }
@@ -627,6 +700,15 @@ async function handleApi(request, response, requestUrl) {
     } else if (action === "stop-all") {
       state.schedules = state.schedules.map((schedule) => ({ ...schedule, enabled: false }));
       addLog("WARN", "All automated jobs paused");
+    } else if (action === "schedule-toggle") {
+      const scheduleId = String(body.id || "").slice(0, 80);
+      const schedule = state.schedules.find((item) => item.id === scheduleId);
+      if (!schedule) {
+        sendJson(response, 404, { error: "Schedule not found." });
+        return true;
+      }
+      schedule.enabled = body.enabled !== undefined ? Boolean(body.enabled) : !schedule.enabled;
+      addLog("INFO", "Automatic message schedule updated", `enabled=${schedule.enabled}`);
     } else if (action === "admin" || action === "silent" || action === "lock") {
       if (action === "lock") state.botLocked = body.enabled !== undefined ? Boolean(body.enabled) : !state.botLocked;
       else {
@@ -645,6 +727,17 @@ async function handleApi(request, response, requestUrl) {
           max: Math.max(1, Math.min(1440, Number(body.schedule.max) || 60)),
           enabled: body.schedule.enabled !== false,
         };
+        if (!findThread(schedule.threadID)) {
+          sendJson(response, 422, { error: "Choose an active target group." });
+          return true;
+        }
+        if (!schedule.message) {
+          sendJson(response, 422, { error: "Automatic message cannot be empty." });
+          return true;
+        }
+        if (schedule.max < schedule.min) {
+          [schedule.min, schedule.max] = [schedule.max, schedule.min];
+        }
         const existing = state.schedules.findIndex((item) => item.id === schedule.id);
         if (existing >= 0) state.schedules[existing] = schedule;
         else state.schedules.push(schedule);
@@ -695,7 +788,7 @@ async function handleApi(request, response, requestUrl) {
     state.threadMessages[threadID].push({ ...item, kind: "incoming" });
     state.threadMessages[threadID] = state.threadMessages[threadID].slice(-100);
     state.stats.messages += 1;
-    addLog("OK", "Message queued for Nightwatch Ops", `thread=${threadID}`);
+    addLog("OK", `Message queued for ${findThread(threadID).name}`, `thread=${threadID}`);
     broadcast("message", item);
     mutateAndBroadcast();
     sendJson(response, 201, { ok: true, message: item, state: publicState() });
@@ -806,6 +899,45 @@ async function handleApi(request, response, requestUrl) {
       sendJson(response, 200, { ok: true });
     } catch (error) {
       sendJson(response, 422, { error: `Invalid JavaScript: ${error.message}` });
+    }
+    return true;
+  }
+
+  if (pathname === "/api/files/write" && request.method === "POST") {
+    if (!requireMutation(request, response)) return true;
+    let body;
+    try { body = await readJson(request); } catch (error) {
+      sendJson(response, 400, { error: error.message });
+      return true;
+    }
+    const file = safeWorkspacePath(String(body.path || ""));
+    const source = String(body.content || "");
+    const extension = file ? path.extname(file).toLowerCase() : "";
+    const allowedExtensions = new Set([".js", ".json", ".md", ".txt", ".css", ".html"]);
+    const protectedFile = file && (
+      path.basename(file) === "appstate.json" ||
+      path.basename(file) === path.basename(DASHBOARD_STATE_PATH) ||
+      isInside(file, path.join(ROOT, ".git")) ||
+      isInside(file, path.join(ROOT, "node_modules")) ||
+      isInside(file, path.join(ROOT, "attached_assets"))
+    );
+    if (!file || protectedFile || !fs.existsSync(file) || !fs.statSync(file).isFile() || !allowedExtensions.has(extension)) {
+      sendJson(response, 403, { error: "This file cannot be edited from the dashboard." });
+      return true;
+    }
+    if (!source || Buffer.byteLength(source) > MAX_FILE) {
+      sendJson(response, 422, { error: "File content is empty or too large." });
+      return true;
+    }
+    try {
+      if (extension === ".js") new (require("vm").Script)(source, { filename: path.basename(file) });
+      if (extension === ".json") JSON.parse(source);
+      fs.writeFileSync(file, source, { encoding: "utf8", mode: 0o600 });
+      addLog("OK", "Workspace file saved", `file=${path.relative(ROOT, file)}`);
+      mutateAndBroadcast();
+      sendJson(response, 200, { ok: true, path: path.relative(ROOT, file), size: Buffer.byteLength(source) });
+    } catch (error) {
+      sendJson(response, 422, { error: `Unable to save file: ${error.message}` });
     }
     return true;
   }

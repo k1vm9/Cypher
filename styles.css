@@ -546,6 +546,13 @@ body.light .code-area, body.light .code-editor, body.light .code-preview, body.l
 .veil-action small { color: var(--muted); font-size: 8px; line-height: 1.35; }
 .live-command-card { animation: rise .28s ease both; }
 .live-command-card .command-edit { white-space: nowrap; }
+.table-empty, .log-empty { color: var(--muted); padding: 28px; text-align: center; }
+.message-preview-list { display: grid; gap: 10px; }
+.message-preview-row { align-items: center; display: grid; gap: 10px; grid-template-columns: auto 1fr auto; }
+.message-preview-row span:nth-child(2) { display: grid; gap: 2px; min-width: 0; }
+.message-preview-row small { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.message-preview-row time { color: var(--muted); font-size: 11px; }
+.code-preview[contenteditable="true"] { outline: none; }
 .image-studio { margin-top: 14px; padding: 22px; }
 .image-studio-form { display: flex; align-items: flex-end; gap: 10px; }
 .image-studio-form .text-area { min-height: 70px; flex: 1; }
