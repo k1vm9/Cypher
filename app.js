@@ -14,6 +14,280 @@
   let currentThread = "";
   let eventStream = null;
   let currentGroupInfo = null;
+  let autoScrollLogs = true;
+  let currentLanguage = (() => {
+    try { return localStorage.getItem("cypher-language") === "en" ? "en" : "ar"; } catch (_) { return "ar"; }
+  })();
+
+  const arabicTranslations = {
+    "SECURE ACCESS": "دخول آمن",
+    "Welcome to": "مرحباً بك في",
+    "Bot Dashboard": "لوحة تحكم البوت",
+    "Enter the access key to open the control center.": "أدخل مفتاح الدخول لفتح مركز التحكم.",
+    "Access key": "مفتاح الدخول",
+    "Enter your access key": "أدخل مفتاح الدخول",
+    "SHOW": "إظهار",
+    "HIDE": "إخفاء",
+    "Enter Dashboard": "دخول لوحة التحكم",
+    "Protected session · local preview": "جلسة محمية · معاينة محلية",
+    "Online": "متصل",
+    "Logout": "تسجيل الخروج",
+    "ACTIVE INSTANCE": "النسخة النشطة",
+    "Secure AI automation and messaging bot": "بوت آلي ومراسلة آمن بالذكاء الاصطناعي",
+    "No session": "لا توجد جلسة",
+    "Updated just now": "تم التحديث الآن",
+    "Messages": "الرسائل",
+    "Commands": "الأوامر",
+    "Groups": "المجموعات",
+    "Users": "المستخدمون",
+    "Uptime": "مدة التشغيل",
+    "Total commands": "إجمالي الأوامر",
+    "Protection layers": "طبقات الحماية",
+    "RAM usage": "استخدام الذاكرة",
+    "live": "مباشر",
+    "catalogued": "مفهرس",
+    "catalogue": "الفهرس",
+    "active": "نشط",
+    "runtime": "وقت التشغيل",
+    "Home": "الرئيسية",
+    "Messenger": "مسنجر",
+    "Cookies": "ملفات الارتباط",
+    "Activation": "التفعيل",
+    "Editor": "المحرر",
+    "Protection": "الحماية",
+    "Settings": "الإعدادات",
+    "AI Intelligence": "ذكاء اصطناعي",
+    "Files": "الملفات",
+    "Admin": "المشرفون",
+    "Control Center": "مركز التحكم",
+    "Chat": "محادثة",
+    "COMMAND DECK": "لوحة الأوامر",
+    "Main Controls": "التحكم الرئيسي",
+    "Operate your bot instance with confidence.": "أدر نسخة البوت بثقة.",
+    "Restart Bot": "إعادة تشغيل البوت",
+    "Reload the active instance": "إعادة تحميل النسخة النشطة",
+    "Stop Bot": "إيقاف البوت",
+    "Bring the instance offline": "إيقاف النسخة عن العمل",
+    "Admin Only": "للمشرفين فقط",
+    "Lock bot to administrators": "قصر البوت على المشرفين",
+    "Silent Mode": "الوضع الصامت",
+    "Pause non-critical replies": "إيقاف الردود غير الضرورية",
+    "Refresh Data": "تحديث البيانات",
+    "Sync live bot telemetry": "مزامنة بيانات البوت المباشرة",
+    "Ping": "فحص الاتصال",
+    "Check connection latency": "فحص زمن استجابة الاتصال",
+    "Open Messenger": "فتح مسنجر",
+    "View active conversations": "عرض المحادثات النشطة",
+    "View Logs": "عرض السجلات",
+    "Inspect system activity": "فحص نشاط النظام",
+    "Latest Messages": "أحدث الرسائل",
+    "Recent activity across your groups": "أحدث النشاطات في مجموعاتك",
+    "View all": "عرض الكل",
+    "No messages yet": "لا توجد رسائل بعد",
+    "New activity will appear here in real time.": "سيظهر النشاط الجديد هنا مباشرةً.",
+    "System health": "حالة النظام",
+    "Dashboard online · Messenger session required": "لوحة التحكم متصلة · جلسة مسنجر مطلوبة",
+    "Awaiting session": "بانتظار الجلسة",
+    "Core process": "العملية الأساسية",
+    "Database": "قاعدة البيانات",
+    "MQTT bridge": "جسر MQTT",
+    "Healthy": "سليم",
+    "Waiting": "بانتظار",
+    "Connect a Messenger session to begin live checks": "صل جلسة مسنجر لبدء الفحوصات المباشرة",
+    "COMMUNICATIONS": "الاتصالات",
+    "Keep a pulse on every active conversation.": "تابع جميع المحادثات النشطة.",
+    "Conversations": "المحادثات",
+    "Live Messenger threads": "محادثات مسنجر المباشرة",
+    "Search threads": "البحث في المحادثات",
+    "No live conversations": "لا توجد محادثات مباشرة",
+    "Connect a Messenger session to load threads.": "صل جلسة مسنجر لتحميل المحادثات.",
+    "No conversation selected": "لم يتم اختيار محادثة",
+    "Connect Messenger to begin": "صل مسنجر للبدء",
+    "Connect Messenger to begin": "صل مسنجر للبدء",
+    "Write a message...": "اكتب رسالة...",
+    "Connect Messenger before sending...": "صل مسنجر قبل الإرسال...",
+    "Silent unavailable": "الوضع الصامت غير متاح",
+    "No group selected": "لم يتم اختيار مجموعة",
+    "Live group information": "معلومات المجموعة المباشرة",
+    "Members": "الأعضاء",
+    "Choose a live conversation.": "اختر محادثة مباشرة.",
+    "SESSION SECURITY": "أمان الجلسة",
+    "Import a trusted session to connect Cypher to Messenger.": "استورد جلسة موثوقة لربط Cypher بمسنجر.",
+    "Sensitive": "حساس",
+    "Import session data": "استيراد بيانات الجلسة",
+    "Paste an appstate JSON, c3c export, or browser cookie header.": "الصق JSON لـ appstate أو تصدير c3c أو ترويسة ملفات ارتباط المتصفح.",
+    "No session imported": "لم يتم استيراد جلسة",
+    "Import an appstate JSON export to enable live conversations.": "استورد ملف appstate JSON لتفعيل المحادثات المباشرة.",
+    "Session payload": "بيانات الجلسة",
+    "Drop session file here": "أفلت ملف الجلسة هنا",
+    "or browse files": "أو تصفح الملفات",
+    "JSON, TXT, or cookie header · encrypted in transit": "JSON أو TXT أو ترويسة ملفات ارتباط · مشفرة أثناء النقل",
+    "Import session": "استيراد الجلسة",
+    "Connect session": "اتصال بالجلسة",
+    "Clear stored session": "مسح الجلسة المحفوظة",
+    "Session values stay on this instance and are never shown in the panel.": "تبقى بيانات الجلسة في هذه النسخة ولا تظهر في اللوحة.",
+    "Before you import": "قبل الاستيراد",
+    "Keep your account protected.": "حافظ على حماية حسابك.",
+    "Only use sessions from an account you control.": "استخدم جلسات من حساب تملكه فقط.",
+    "Never paste cookies into public chats or logs.": "لا تلصق ملفات الارتباط في المحادثات العامة أو السجلات.",
+    "Importing a new session replaces the current one.": "استيراد جلسة جديدة يستبدل الجلسة الحالية.",
+    "Encrypted at rest": "مشفرة أثناء التخزين",
+    "Stored only for this bot instance.": "محفوظة لهذه النسخة من البوت فقط.",
+    "AUTOMATION LIBRARY": "مكتبة الأتمتة",
+    "Manage the commands your bot knows.": "أدر الأوامر التي يعرفها البوت.",
+    "New command": "أمر جديد",
+    "Search commands": "البحث في الأوامر",
+    "All commands": "كل الأوامر",
+    "Utility": "أدوات",
+    "AI": "ذكاء اصطناعي",
+    "THREAD ROUTING": "توجيه المحادثات",
+    "Choose where Cypher can respond and operate.": "اختر الأماكن التي يمكن لـ Cypher الرد والعمل فيها.",
+    "Save changes": "حفظ التغييرات",
+    "Thread configuration": "إعدادات المحادثة",
+    "Set the default activation behavior.": "حدد سلوك التفعيل الافتراضي.",
+    "Thread or group ID": "معرف المحادثة أو المجموعة",
+    "Connect Messenger to load threads": "صل مسنجر لتحميل المحادثات",
+    "Announcement text": "نص الإعلان",
+    "Optional welcome or activation message...": "رسالة ترحيب أو تفعيل اختيارية...",
+    "Whitelist": "القائمة البيضاء",
+    "Blacklist": "القائمة السوداء",
+    "DEFENSE MATRIX": "مصفوفة الدفاع",
+    "Manage the safety layers available to the bot.": "أدر طبقات الأمان المتاحة للبوت.",
+    "Loading": "جارٍ التحميل",
+    "INSTANCE PREFERENCES": "تفضيلات النسخة",
+    "Shape the way Cypher behaves across your workspace.": "حدد طريقة عمل Cypher في مساحة العمل.",
+    "Save settings": "حفظ الإعدادات",
+    "General": "عام",
+    "Basic bot identity and commands.": "هوية البوت وأوامره الأساسية.",
+    "Bot name": "اسم البوت",
+    "Command prefix": "بادئة الأمر",
+    "Default language": "اللغة الافتراضية",
+    "Connection": "الاتصال",
+    "Keep your instance reachable.": "حافظ على إمكانية الوصول إلى نسختك.",
+    "Maintain a warm connection": "الحفاظ على اتصال نشط",
+    "Reconnect automatically on failure": "إعادة الاتصال تلقائياً عند الفشل",
+    "Reconnect interval": "فترة إعادة الاتصال",
+    "Privacy": "الخصوصية",
+    "Control visibility and responses.": "تحكم في الظهور والردود.",
+    "Stealth mode": "الوضع الخفي",
+    "Reduce bot presence signals": "تقليل إشارات وجود البوت",
+    "Allow inbox messages": "السماح برسائل الوارد",
+    "Respond to direct messages": "الرد على الرسائل المباشرة",
+    "Access control": "التحكم في الوصول",
+    "Protect high-impact operations.": "احمِ العمليات عالية التأثير.",
+    "Admin-only mode": "وضع المشرفين فقط",
+    "Only admins can use commands": "المشرفون فقط يمكنهم استخدام الأوامر",
+    "Dashboard password": "كلمة مرور لوحة التحكم",
+    "ACTIVITY FEED": "خلاصة النشاط",
+    "Review recent message events from connected threads.": "راجع أحداث الرسائل الأخيرة من المحادثات المتصلة.",
+    "Filter": "تصفية",
+    "Search message log": "البحث في سجل الرسائل",
+    "Sender": "المرسل",
+    "Thread": "المحادثة",
+    "Message preview": "معاينة الرسالة",
+    "Status": "الحالة",
+    "Processed": "تمت المعالجة",
+    "SYSTEM OUTPUT": "مخرجات النظام",
+    "Terminal output and operational events.": "مخرجات الطرفية والأحداث التشغيلية.",
+    "Auto-scroll": "تمرير تلقائي",
+    "Clear": "مسح",
+    "Download": "تنزيل",
+    "LIVE": "مباشر",
+    "COMMAND LABORATORY": "مختبر الأوامر",
+    "Generate, test, and refine new bot capabilities.": "أنشئ واختبر وحسّن قدرات البوت.",
+    "Ready": "جاهز",
+    "Generate a command": "إنشاء أمر",
+    "Describe what you want Cypher to automate.": "صف ما تريد من Cypher أتمتته.",
+    "Generation complete": "اكتمل الإنشاء",
+    "Generate": "إنشاء",
+    "Ask Cypher AI": "اسأل Cypher AI",
+    "Your assistant for bot operations.": "مساعدك لعمليات البوت.",
+    "Reset conversation": "إعادة ضبط المحادثة",
+    "INSTANCE FILESYSTEM": "نظام ملفات النسخة",
+    "Browse source files and bring context into the AI lab.": "تصفح ملفات المصدر وأضف سياقاً إلى مختبر الذكاء الاصطناعي.",
+    "Upload file": "رفع ملف",
+    "Root": "الجذر",
+    "Sensitive values are redacted": "تم إخفاء القيم الحساسة",
+    "Save file": "حفظ الملف",
+    "TRUSTED OPERATORS": "المشغلون الموثوقون",
+    "Manage who can access high-impact bot controls.": "أدر من يمكنه الوصول إلى أدوات البوت الحساسة.",
+    "Save admin list": "حفظ قائمة المشرفين",
+    "Owner": "المالك",
+    "One account with full control.": "حساب واحد بصلاحيات كاملة.",
+    "Super admins": "المشرفون العامون",
+    "Can manage settings and access.": "يمكنهم إدارة الإعدادات والوصول.",
+    "Can use approved bot commands.": "يمكنهم استخدام أوامر البوت المعتمدة.",
+    "Add owner": "إضافة مالك",
+    "Add super admin": "إضافة مشرف عام",
+    "Add admin": "إضافة مشرف",
+    "AUTOMATION ORCHESTRATOR": "منسق الأتمتة",
+    "Schedule messages and automate group behavior.": "جدولة الرسائل وأتمتة سلوك المجموعات.",
+    "Stop all automation": "إيقاف كل الأتمتة",
+    "Automatic messages": "الرسائل التلقائية",
+    "Send a recurring message to a selected live group.": "إرسال رسالة متكررة إلى مجموعة مباشرة محددة.",
+    "Target group": "المجموعة المستهدفة",
+    "No connected groups": "لا توجد مجموعات متصلة",
+    "Message": "الرسالة",
+    "Connect Messenger before scheduling messages...": "صل مسنجر قبل جدولة الرسائل...",
+    "Minimum interval": "الحد الأدنى للفترة",
+    "Maximum interval": "الحد الأقصى للفترة",
+    "Save message": "حفظ الرسالة",
+    "Connect Messenger to schedule messages": "صل مسنجر لجدولة الرسائل",
+    "Group name locking": "قفل اسم المجموعة",
+    "Enable name protection for a selected live group.": "تفعيل حماية الاسم لمجموعة مباشرة محددة.",
+    "Connect Messenger to configure protection": "صل مسنجر لإعداد الحماية",
+    "Auto-restore changes": "استعادة التغييرات تلقائياً",
+    "Restore the name when modified": "استعادة الاسم عند تغييره",
+    "Nicknames": "الأسماء المستعارة",
+    "Available after a live group is selected.": "متاح بعد اختيار مجموعة مباشرة.",
+    "Add": "إضافة",
+    "No live group selected.": "لم يتم اختيار مجموعة مباشرة.",
+    "Switch to English": "التبديل إلى الإنجليزية",
+    "Switch to Arabic": "التبديل إلى العربية",
+    "Toggle appearance": "تبديل المظهر",
+    "Show access key": "إظهار مفتاح الدخول",
+    "Hide access key": "إخفاء مفتاح الدخول",
+  };
+
+  function translateText(value) {
+    const text = String(value ?? "");
+    return currentLanguage === "ar" ? (arabicTranslations[text.trim()] || text) : text;
+  }
+
+  function applyLanguage() {
+    document.documentElement.lang = currentLanguage;
+    document.documentElement.dir = currentLanguage === "ar" ? "rtl" : "ltr";
+    document.body.dataset.language = currentLanguage;
+    document.querySelectorAll("body *").forEach((element) => {
+      if (element.tagName === "SCRIPT" || element.tagName === "STYLE" || element.tagName === "TEXTAREA" || element.tagName === "PRE") return;
+      element.childNodes.forEach((node) => {
+        if (node.nodeType !== Node.TEXT_NODE || !node.nodeValue.trim()) return;
+        const source = node.__cypherLanguageSource || node.nodeValue.trim();
+        node.__cypherLanguageSource = source;
+        const leading = node.nodeValue.match(/^\s*/)?.[0] || "";
+        const trailing = node.nodeValue.match(/\s*$/)?.[0] || "";
+        node.nodeValue = `${leading}${currentLanguage === "ar" ? (arabicTranslations[source] || source) : source}${trailing}`;
+      });
+    });
+    const translatableAttributes = ["placeholder", "aria-label", "title"];
+    document.querySelectorAll(translatableAttributes.map((attribute) => `[${attribute}]`).join(",")).forEach((element) => {
+      translatableAttributes.forEach((attribute) => {
+        if (!element.hasAttribute(attribute)) return;
+        const sourceAttribute = `data-cypher-${attribute.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-source`;
+        const source = element.getAttribute(sourceAttribute) || element.getAttribute(attribute);
+        element.setAttribute(sourceAttribute, source);
+        element.setAttribute(attribute, currentLanguage === "ar" ? (arabicTranslations[source] || source) : source);
+      });
+    });
+    const toggle = $("#languageToggle");
+    if (toggle) {
+      const nextLanguage = currentLanguage === "ar" ? "English" : "العربية";
+      toggle.querySelector(".language-code").textContent = currentLanguage === "ar" ? "EN" : "ع";
+      toggle.querySelector(".language-name").textContent = nextLanguage;
+      toggle.setAttribute("aria-label", currentLanguage === "ar" ? "Switch to English" : "Switch to Arabic");
+      toggle.setAttribute("title", currentLanguage === "ar" ? "Switch to English" : "Switch to Arabic");
+    }
+  }
 
   function escapeHtml(value) {
     return String(value ?? "").replace(/[&<>"']/g, (character) => ({
@@ -152,6 +426,7 @@
     });
     renderHealth(data, status);
     syncSession(messenger);
+    applyLanguage();
   }
 
   function renderHealth(data, status) {
@@ -225,6 +500,7 @@
       await loadThreads();
       await loadFiles();
       await loadAdmins();
+      applyLanguage();
     } catch (error) {
       toast(error.message, "error");
     }
@@ -262,6 +538,10 @@
     row.innerHTML = `<time>${escapeHtml(log.time || "")}</time><b class="${level}">${escapeHtml(log.level || "INFO")}</b><span>${escapeHtml(log.text || "")} <em>${escapeHtml(log.meta || "")}</em></span>`;
     lines.prepend(row);
     while (lines.children.length > 100) lines.lastElementChild.remove();
+    const count = $("#panel-logs .inline-count");
+    if (count) count.textContent = String(lines.querySelectorAll(":scope > div:not(.log-empty)").length);
+    if (autoScrollLogs) lines.scrollTop = 0;
+    applyLanguage();
   }
 
   async function runAction(action, button, payload = {}) {
@@ -352,6 +632,10 @@
     lines.innerHTML = "";
     if (logs.length) logs.slice(0, 100).reverse().forEach(appendLog);
     else lines.innerHTML = `<div class="log-empty">No log entries yet.</div>`;
+    const count = $("#panel-logs .inline-count");
+    if (count) count.textContent = String(logs.length);
+    if (autoScrollLogs) lines.scrollTop = 0;
+    applyLanguage();
   }
 
   function renderMessages(messages) {
@@ -711,6 +995,49 @@
     }
   }
 
+  function toggleLogAutoScroll(button) {
+    autoScrollLogs = !autoScrollLogs;
+    button?.classList.toggle("active", autoScrollLogs);
+    toast(autoScrollLogs ? "Auto-scroll enabled" : "Auto-scroll disabled");
+  }
+
+  function downloadLogs() {
+    const lines = $$("#logLines > div:not(.log-empty)").map((row) => row.textContent.trim()).filter(Boolean);
+    if (!lines.length) return toast("There are no logs to download.", "error");
+    const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `cypher-logs-${new Date().toISOString().slice(0, 10)}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    toast("Logs downloaded");
+  }
+
+  function chooseCookieFile() {
+    const picker = document.createElement("input");
+    picker.type = "file";
+    picker.accept = ".json,.txt,.cookies,.cookie";
+    picker.addEventListener("change", async () => {
+      const file = picker.files?.[0];
+      if (!file) return;
+      try {
+        const content = await file.text();
+        if (!content.trim()) throw new Error("The selected file is empty.");
+        const input = $("#cookieInput");
+        if (!input) throw new Error("The cookie input is unavailable.");
+        input.value = content;
+        activateTab("cookies");
+        toast(`${file.name} loaded; review it and import the session`);
+      } catch (error) {
+        toast(error.message || "Choose a valid session file.", "error");
+      }
+    });
+    picker.click();
+  }
+
   async function importSession() {
     const payload = $("#cookieInput")?.value.trim();
     if (!payload) return toast("Paste or choose a session export first.", "error");
@@ -811,7 +1138,7 @@
   function toast(message, type = "success") {
     const item = document.createElement("div");
     item.className = "toast";
-    item.innerHTML = `${icon(type === "success" ? "check" : "info")}<span>${escapeHtml(message)}</span>`;
+    item.innerHTML = `${icon(type === "success" ? "check" : "info")}<span>${escapeHtml(translateText(message))}</span>`;
     toastRegion.appendChild(item);
     setTimeout(() => item.remove(), 3200);
   }
@@ -945,26 +1272,20 @@
       toast("Voice recording is not available in this browser panel.", "error");
       return;
     }
-    if (target.dataset.action === "upload") {
-      const picker = document.createElement("input");
-      picker.type = "file";
-      picker.accept = ".json";
-      picker.addEventListener("change", async () => {
-        const file = picker.files?.[0];
-        if (!file) return;
-        try {
-          const content = await file.text();
-          const input = $("#cookieInput");
-          if (input && JSON.parse(content)) {
-            input.value = content;
-            activateTab("cookies");
-            toast(`${file.name} loaded; press Import session to connect`);
-          }
-        } catch (_) {
-          toast("Choose a valid JSON session file.", "error");
-        }
-      });
-      picker.click();
+    if (target.dataset.action === "cookie-upload") {
+      chooseCookieFile();
+      return;
+    }
+    if (target.dataset.action === "file-upload") {
+      toast("Source file uploads are not enabled from the dashboard.", "error");
+      return;
+    }
+    if (target.dataset.action === "toggle-autoscroll") {
+      toggleLogAutoScroll(target);
+      return;
+    }
+    if (target.dataset.action === "download-logs") {
+      downloadLogs();
       return;
     }
     if (target.dataset.scheduleToggle) {
@@ -1085,6 +1406,12 @@
     document.body.classList.toggle("light");
     toast(document.body.classList.contains("light") ? "Light appearance enabled" : "Dark appearance enabled");
   });
+  $("#languageToggle")?.addEventListener("click", () => {
+    currentLanguage = currentLanguage === "ar" ? "en" : "ar";
+    try { localStorage.setItem("cypher-language", currentLanguage); } catch (_) {}
+    applyLanguage();
+    toast(currentLanguage === "ar" ? "Arabic language enabled" : "English language enabled");
+  });
 
   const composer = $(".composer-input textarea");
   $(".composer-input .send-btn")?.addEventListener("click", async () => {
@@ -1135,6 +1462,8 @@
     const file = event.target.files?.[0];
     if (file) toast(`${file.name} selected for upload`);
   });
+
+  applyLanguage();
 
   (async function init() {
     try {

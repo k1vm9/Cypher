@@ -83,6 +83,10 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width:
 .topbar-actions, .heading-actions { display: flex; align-items: center; gap: 10px; }
 .connection-pill, .badge { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--border); border-radius: 999px; padding: 8px 11px; color: var(--subtext); background: rgba(255,255,255,.035); font-size: 11px; white-space: nowrap; }
 .connection-label { color: var(--muted); }
+.language-toggle { display: inline-flex; align-items: center; gap: 7px; min-height: 34px; padding: 0 10px; border: 1px solid var(--border); border-radius: 10px; color: var(--subtext); background: rgba(255,255,255,.035); font-size: 10px; transition: .2s; }
+.language-toggle:hover { color: var(--text); border-color: var(--border-strong); background: rgba(255,255,255,.07); transform: translateY(-1px); }
+.language-code { display: inline-grid; place-items: center; min-width: 22px; height: 22px; border-radius: 6px; color: #fff; background: var(--red); font: 700 9px ui-monospace, monospace; }
+.language-name { white-space: nowrap; }
 .icon-btn { display: inline-grid; place-items: center; width: 34px; height: 34px; padding: 0; border: 1px solid transparent; border-radius: 10px; color: var(--subtext); background: transparent; transition: .2s; }
 .icon-btn:hover { color: var(--text); background: rgba(255,255,255,.07); border-color: var(--border); transform: translateY(-1px); }
 .btn { display: inline-flex; justify-content: center; align-items: center; gap: 8px; min-height: 40px; padding: 0 15px; border: 1px solid transparent; border-radius: 11px; font-weight: 650; font-size: 12px; transition: transform .2s, background .2s, border .2s, box-shadow .2s; }
@@ -547,6 +551,30 @@ body.light .code-area, body.light .code-editor, body.light .code-preview, body.l
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* Arabic is the default panel language. The language switch changes both copy
+   and document direction so controls, navigation, and log columns read
+   naturally in either language. */
+html[dir="rtl"] body { direction: rtl; font-family: "Noto Sans Arabic", "Segoe UI", Tahoma, sans-serif; }
+html[dir="rtl"] .login-form, html[dir="rtl"] .brand, html[dir="rtl"] .control-card,
+html[dir="rtl"] .thread, html[dir="rtl"] .command-select, html[dir="rtl"] .veil-action { text-align: right; }
+html[dir="rtl"] .input-wrap > svg { right: 13px; left: auto; }
+html[dir="rtl"] .input-wrap input { padding-right: 39px; padding-left: 62px; }
+html[dir="rtl"] .input-action { right: auto; left: 8px; }
+html[dir="rtl"] .search-box > svg { right: 11px; left: auto; }
+html[dir="rtl"] .search-box input { padding-right: 34px; padding-left: 10px; }
+html[dir="rtl"] .card-arrow { margin-right: auto; margin-left: 0; transform: rotate(180deg); }
+html[dir="rtl"] .thread.active::before { right: 0; left: auto; }
+html[dir="rtl"] .thread time { margin-right: auto; margin-left: 0; }
+html[dir="rtl"] .unread { right: auto; left: 8px; }
+html[dir="rtl"] .chat-actions { margin-right: auto; margin-left: 0; }
+html[dir="rtl"] .chat-head small .status-dot { margin-right: 0; margin-left: 4px; }
+html[dir="rtl"] .active-thread .badge { margin-right: auto; margin-left: 0; }
+html[dir="rtl"] .editor-sidebar { border-right: 0; border-left: 1px solid var(--border); }
+html[dir="rtl"] .command-select { border-right: 2px solid transparent; border-left: 0; }
+html[dir="rtl"] .command-select:hover, html[dir="rtl"] .command-select.active { border-right-color: var(--red); border-left-color: transparent; }
+html[dir="rtl"] select { background-position: 17px 18px, 12px 18px; }
+html[dir="rtl"] .profile-meta { align-items: flex-start; }
 
 /* Live Veil-compatible controls */
 .veil-extension { margin-top: 14px; padding: 20px; }

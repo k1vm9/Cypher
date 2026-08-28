@@ -1066,7 +1066,6 @@ async function handleApi(request, response, requestUrl) {
       }
     } else if (action === "clear-logs") {
       state.logs = [];
-      addLog("OK", "Log stream cleared");
     } else if (action === "stop-all") {
       state.schedules = state.schedules.map((schedule) => ({ ...schedule, enabled: false }));
       clearScheduleTimers();
