@@ -11,7 +11,7 @@
   const toastRegion = $("#toastRegion");
   const icon = (name) => `<svg><use href="#i-${name}"></use></svg>`;
   let csrfToken = "";
-  let currentThread = "thread_8841";
+  let currentThread = "";
   let eventStream = null;
 
   function escapeHtml(value) {
@@ -61,21 +61,33 @@
 
   function syncStatus(data) {
     if (!data) return;
-    const status = data.status || "online";
-    const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+    const messenger = data.messenger || {};
+    const status = messenger.status || data.status || "no-session";
+    const statusLabels = {
+      connected: "Connected",
+      connecting: "Connecting",
+      stored: "Session stored",
+      "no-session": "No session",
+      stopped: "Stopped",
+      "auth-error": "Auth error",
+      "dependency-missing": "Dependency missing",
+      offline: "Offline",
+    };
+    const statusLabel = statusLabels[status] || status.replace(/-/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+    const connected = status === "connected";
     $$(".connection-pill").forEach((pill) => {
       const label = pill.querySelector("span:nth-child(2)");
       const latency = pill.querySelector(".connection-label");
       if (label) label.textContent = statusLabel;
-      if (latency) latency.textContent = status === "online" ? `· ${data.latency || 42}ms` : "· waiting";
-      pill.classList.toggle("is-offline", status !== "online");
+      if (latency) latency.textContent = connected ? `· ${data.latency || "—"}ms` : "· waiting";
+      pill.classList.toggle("is-offline", !connected);
     });
     $$(".profile-card .badge").forEach((badge) => {
-      badge.innerHTML = `<span class="status-dot ${status === "online" ? "online" : status === "connecting" ? "amber" : ""}"></span> ${statusLabel}`;
-      badge.className = `badge ${status === "online" ? "badge-success" : status === "connecting" ? "badge-warning" : "badge-red"}`;
+      badge.innerHTML = `<span class="status-dot ${connected ? "online" : status === "connecting" ? "amber" : ""}"></span> ${statusLabel}`;
+      badge.className = `badge ${connected ? "badge-success" : status === "connecting" || status === "stored" ? "badge-warning" : "badge-red"}`;
     });
     $$(".profile-card .eyebrow .status-dot").forEach((dot) => {
-      dot.className = `status-dot ${status === "online" ? "online" : status === "connecting" ? "amber" : ""}`;
+      dot.className = `status-dot ${connected ? "online" : status === "connecting" || status === "stored" ? "amber" : ""}`;
     });
     const stats = data.stats || {};
     const values = [
@@ -87,8 +99,29 @@
     });
     const profileVersion = $(".profile-copy code");
     if (profileVersion) profileVersion.textContent = `cypher-live · v${data.version || "1.2.14"}`;
+    const settingsPanel = $("#panel-settings");
+    if (settingsPanel) {
+      const fields = $$("input", settingsPanel);
+      if (fields[0] && document.activeElement !== fields[0]) fields[0].value = data.settings?.botName || "Cypher";
+      if (fields[1] && document.activeElement !== fields[1]) fields[1].value = data.settings?.prefix || "!";
+    }
+    const activation = $("#panel-activation .segmented");
+    if (activation) {
+      $$(".segmented button", activation).forEach((button) => {
+        button.classList.toggle("active", button.textContent.trim().toLowerCase() === data.settings?.activationMode);
+      });
+    }
+    $("[data-action='admin'] .toggle")?.classList.toggle("active", Boolean(data.settings?.adminOnly));
+    $("[data-action='silent'] .toggle")?.classList.toggle("active", Boolean(data.settings?.silentMode));
     const silentChip = $(".silent-chip");
-    if (silentChip) silentChip.innerHTML = `<span class="status-dot ${data.settings?.silentMode ? "amber" : "online"}"></span> Silent ${data.settings?.silentMode ? "on" : "off"}`;
+    if (silentChip) silentChip.innerHTML = `<span class="status-dot ${data.settings?.silentMode ? "amber" : connected ? "online" : ""}"></span> Silent ${connected ? (data.settings?.silentMode ? "on" : "off") : "unavailable"}`;
+    const composerInput = $(".composer-input textarea");
+    const sendButton = $(".composer-input .send-btn");
+    if (composerInput) {
+      composerInput.disabled = !connected;
+      composerInput.placeholder = connected ? "Write a message..." : "Connect Messenger before sending...";
+    }
+    if (sendButton) sendButton.disabled = !connected;
     const statusSummary = $("#veilStatusSummary");
     if (statusSummary) statusSummary.textContent = `${data.activeProtectionCount || 0}/${data.protectionCount || 20} safety layers active`;
     if (data.messages) renderMessages(data.messages);
@@ -116,6 +149,32 @@
         label.innerHTML = `<span class="status-dot ${data.protections?.[toggle.dataset.protection] ? "online" : ""}"></span> ${data.protections?.[toggle.dataset.protection] ? "Enabled" : "Disabled"}`;
       }
     });
+    syncSession(messenger);
+  }
+
+  function syncSession(session = {}) {
+    const status = session.status || "no-session";
+    const labels = {
+      connected: "Connected to Messenger",
+      connecting: "Connecting to Messenger…",
+      stored: "Session stored but not connected",
+      "no-session": "No session imported",
+      stopped: "Connection stopped",
+      "auth-error": "Messenger rejected this session",
+      "dependency-missing": "Messenger client is not installed",
+    };
+    const statusNode = $("#sessionStatus");
+    if (statusNode) {
+      statusNode.className = `session-status ${status === "connected" ? "connected" : status === "connecting" ? "connecting" : "disconnected"}`;
+      statusNode.innerHTML = `<span class="status-dot ${status === "connected" ? "online" : status === "connecting" ? "amber" : ""}"></span><span><strong>${labels[status] || status}</strong><small>${session.error ? escapeHtml(session.error) : session.hasSession ? "Session data is stored locally; values are never shown." : "Import an appstate JSON export to enable live conversations."}</small></span>`;
+    }
+    const connect = $('[data-action="connect-session"]');
+    const clear = $('[data-action="clear-session"]');
+    if (connect) {
+      connect.disabled = status === "connecting" || status === "connected";
+      connect.textContent = status === "connected" ? "Connected" : "Connect session";
+    }
+    if (clear) clear.disabled = !session.hasSession || status === "connecting";
   }
 
   async function loadDashboard() {
@@ -199,6 +258,7 @@
         "save-message": "Automatic message schedule saved",
       };
       toast(messages[action] || "Action completed");
+      if (["restart", "stop", "start", "refresh"].includes(action)) await loadThreads();
       return data;
     } catch (error) {
       toast(error.message, "error");
@@ -304,11 +364,25 @@
     const schedule = schedules.find((item) => item.id === "automatic-message") || schedules[0];
     const toggle = $("[data-schedule-toggle]", card);
     if (toggle) toggle.classList.toggle("active", Boolean(schedule?.enabled));
-    if (!schedule) return;
+     if (!schedule) {
+       if (toggle) toggle.disabled = true;
+       const select = $("select", card);
+       const message = $(".text-area", card);
+       const fields = $$("input", card);
+       if (select) select.disabled = true;
+       if (message) message.value = "";
+       fields.forEach((field) => { field.value = ""; field.disabled = true; });
+       const nextRun = $(".next-run", card);
+       if (nextRun) nextRun.textContent = "Connect Messenger to schedule messages";
+       return;
+     }
+     if (toggle) toggle.disabled = false;
     card.dataset.scheduleId = schedule.id;
     const select = $("select", card);
     const message = $(".text-area", card);
     const fields = $$("input", card);
+     if (select) select.disabled = false;
+     fields.forEach((field) => { field.disabled = false; });
     if (select) select.value = schedule.threadID;
     if (message && document.activeElement !== message) message.value = schedule.message || "";
     if (fields[0] && document.activeElement !== fields[0]) fields[0].value = schedule.min;
@@ -416,11 +490,47 @@
       const data = await api("/api/threads");
       const list = $(".thread-list");
       if (!list) return;
-      list.innerHTML = (data.threads || []).map((thread, index) => `<button class="thread ${thread.id === currentThread ? "active" : ""}" data-thread-id="${escapeHtml(thread.id)}">
+       const threads = data.threads || [];
+       list.innerHTML = threads.length ? threads.map((thread, index) => `<button class="thread ${thread.id === currentThread ? "active" : ""}" data-thread-id="${escapeHtml(thread.id)}">
         <span class="avatar ${["red", "blue", "purple", "green"][index % 4]}-avatar">${escapeHtml(thread.name.slice(0, 2).toUpperCase())}</span>
         <span class="thread-copy"><strong>${escapeHtml(thread.name)}</strong><small>${thread.members} members · ${thread.type}</small></span>
-        <time>${thread.unread ? `${thread.unread} new` : "active"}</time>${thread.unread ? `<i class="unread">${thread.unread}</i>` : ""}</button>`).join("");
-      await loadThread(currentThread);
+         <time>${thread.unread ? `${thread.unread} new` : "active"}</time>${thread.unread ? `<i class="unread">${thread.unread}</i>` : ""}</button>`).join("")
+         : `<div class="empty-state compact live-empty"><strong>No live conversations</strong><span>Connect a valid Messenger session to load threads.</span></div>`;
+       const scheduleSelect = $("[data-automation='messages'] select");
+       if (scheduleSelect) {
+         scheduleSelect.innerHTML = threads.length
+           ? threads.map((thread) => `<option value="${escapeHtml(thread.id)}">${escapeHtml(thread.name)} · ${escapeHtml(thread.id)}</option>`).join("")
+           : `<option value="">No connected groups</option>`;
+         scheduleSelect.disabled = !threads.length;
+       }
+       const activeThreads = $("#activeThreadsList");
+       if (activeThreads) {
+         activeThreads.innerHTML = threads.length
+           ? threads.map((thread, index) => `<div class="active-thread"><span class="avatar tiny ${["red", "blue", "purple", "green"][index % 4]}-avatar">${escapeHtml(thread.name.slice(0, 2).toUpperCase())}</span><div><strong>${escapeHtml(thread.name)}</strong><code>${escapeHtml(thread.id)}</code></div><span class="badge badge-success">Live</span></div>`).join("")
+           : `<div class="empty-state compact live-empty"><strong>No live threads</strong><span>Connect Messenger to load active threads.</span></div>`;
+       }
+       const activationId = $("#threadId");
+       if (activationId) {
+         activationId.disabled = !threads.length;
+         activationId.placeholder = threads.length ? "Select a live thread" : "Connect Messenger to load threads";
+         if (threads.length && !activationId.value) activationId.value = threads[0].id;
+         if (!threads.length) activationId.value = "";
+       }
+       const threadSearch = $(".thread-sidebar .search-box input");
+       if (threadSearch && !threadSearch.dataset.bound) {
+         threadSearch.dataset.bound = "true";
+         threadSearch.addEventListener("input", () => {
+           const query = threadSearch.value.toLowerCase().trim();
+           $$(".thread", list).forEach((thread) => thread.classList.toggle("is-hidden", query && !thread.textContent.toLowerCase().includes(query)));
+         });
+       }
+       if (threads.length) {
+         if (!threads.some((thread) => thread.id === currentThread)) currentThread = threads[0].id;
+         await loadThread(currentThread);
+       } else {
+         currentThread = "";
+         await loadThread("");
+       }
     } catch (error) {
       toast(error.message, "error");
     }
@@ -428,6 +538,21 @@
 
   async function loadThread(threadID) {
     currentThread = threadID;
+    if (!threadID) {
+      const body = $(".chat-body");
+      if (body) body.innerHTML = `<div class="empty-state live-empty"><strong>No conversation selected</strong><span>Connect Messenger and choose a live thread to begin.</span></div>`;
+      const group = $(".group-sidebar");
+      if (group) {
+        const name = group.querySelector(".group-copy strong");
+        const id = group.querySelector(".group-copy code");
+        const members = group.querySelector(".group-stat strong");
+        if (name) name.textContent = "No group selected";
+        if (id) id.textContent = "—";
+        if (members) members.textContent = "—";
+      }
+      $$(".thread").forEach((item) => item.classList.remove("active"));
+      return;
+    }
     try {
       const data = await api(`/api/threads/${encodeURIComponent(threadID)}/messages`);
       const thread = await api("/api/threads").then((result) => result.threads.find((item) => item.id === threadID));
@@ -437,6 +562,15 @@
         const sub = head.querySelector("small");
         if (name) name.textContent = thread.name;
         if (sub) sub.innerHTML = `<span class="status-dot online"></span> ${thread.members} members · Active now`;
+      }
+      const group = $(".group-sidebar");
+      if (group && thread) {
+        const name = group.querySelector(".group-copy strong");
+        const id = group.querySelector(".group-copy code");
+        const members = group.querySelector(".group-stat strong");
+        if (name) name.textContent = thread.name;
+        if (id) id.textContent = thread.id;
+        if (members) members.textContent = String(thread.members || "—");
       }
       const body = $(".chat-body");
       if (body) {
@@ -518,6 +652,48 @@
       toast(error.message, "error");
     } finally {
       button.disabled = false;
+    }
+  }
+
+  async function importSession() {
+    const payload = $("#cookieInput")?.value.trim();
+    if (!payload) return toast("Paste or choose an appstate JSON file first.", "error");
+    const button = $('[data-action="import"]');
+    if (button) button.disabled = true;
+    try {
+      const data = await api("/api/session/import", { method: "POST", body: JSON.stringify({ payload }) });
+      syncStatus(data.state);
+      toast(data.session?.connected ? "Session imported and connected" : "Session stored; connection needs attention", data.session?.connected ? "success" : "error");
+      await loadThreads();
+    } catch (error) {
+      toast(error.message, "error");
+    } finally {
+      if (button) button.disabled = false;
+    }
+  }
+
+  async function connectSession() {
+    try {
+      const data = await api("/api/session/connect", { method: "POST", body: "{}" });
+      syncStatus(data.state);
+      toast(data.session?.connected ? "Messenger session connected" : (data.session?.error || "Messenger session could not connect"), data.session?.connected ? "success" : "error");
+      await loadThreads();
+    } catch (error) {
+      toast(error.message, "error");
+    }
+  }
+
+  async function clearSession() {
+    if (!window.confirm("Clear the stored Messenger session from this instance?")) return;
+    try {
+      const data = await api("/api/session", { method: "DELETE", body: "{}" });
+      syncStatus(data.state);
+      const input = $("#cookieInput");
+      if (input) input.value = "";
+      await loadThreads();
+      toast("Messenger session cleared");
+    } catch (error) {
+      toast(error.message, "error");
     }
   }
 
@@ -606,7 +782,7 @@
   });
 
   document.addEventListener("click", async (event) => {
-    const target = event.target.closest("button, [data-tab-target], [data-tab]");
+    const target = event.target.closest("button, [data-action], [data-tab-target], [data-tab], [data-file-path], [data-command-file], [data-admin-action], [data-protection], [data-schedule-toggle]");
     if (!target) return;
     if (target.dataset.tab) {
       activateTab(target.dataset.tab);
@@ -646,12 +822,36 @@
       await generateImage(target);
       return;
     }
+    if (target.dataset.action === "import") {
+      await importSession();
+      return;
+    }
+    if (target.dataset.action === "connect-session") {
+      await connectSession();
+      return;
+    }
+    if (target.dataset.action === "clear-session") {
+      await clearSession();
+      return;
+    }
     if (target.dataset.action === "upload") {
       const picker = document.createElement("input");
       picker.type = "file";
-      picker.accept = ".json,.js,.md,.txt,.css,.html";
-      picker.addEventListener("change", () => {
-        if (picker.files?.[0]) toast(`${picker.files[0].name} selected; review it before saving`);
+      picker.accept = ".json";
+      picker.addEventListener("change", async () => {
+        const file = picker.files?.[0];
+        if (!file) return;
+        try {
+          const content = await file.text();
+          const input = $("#cookieInput");
+          if (input && JSON.parse(content)) {
+            input.value = content;
+            activateTab("cookies");
+            toast(`${file.name} loaded; press Import session to connect`);
+          }
+        } catch (_) {
+          toast("Choose a valid JSON session file.", "error");
+        }
       });
       picker.click();
       return;

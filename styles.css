@@ -267,6 +267,16 @@ code, pre, .profile-copy code { font-family: "JetBrains Mono", "SFMono-Regular",
 .dropzone span { display: flex; flex-direction: column; gap: 3px; font-size: 10px; }
 .dropzone small { margin-left: auto; color: var(--muted); font-size: 8px; }
 .form-actions { display: flex; align-items: center; gap: 12px; margin-top: 20px; }
+.session-status { display: flex; align-items: flex-start; gap: 10px; margin: 0 0 18px; padding: 12px 13px; border: 1px solid var(--border); border-radius: 10px; background: rgba(255,255,255,.025); }
+.session-status > .status-dot { margin-top: 4px; }
+.session-status > span:last-child { display: grid; gap: 4px; }
+.session-status strong { color: var(--text); font-size: 10px; }
+.session-status small { color: var(--muted); font-size: 9px; line-height: 1.4; }
+.session-status.connected { border-color: rgba(55, 211, 137, .32); background: rgba(55, 211, 137, .06); }
+.session-status.connecting { border-color: rgba(244, 183, 64, .32); background: rgba(244, 183, 64, .06); }
+.session-status.disconnected { border-color: rgba(227, 38, 53, .22); }
+.form-actions .btn:disabled, .composer-input .send-btn:disabled { opacity: .48; cursor: not-allowed; }
+.live-empty { min-height: 100px; }
 .form-note, .hint { color: var(--muted); font-size: 9px; line-height: 1.5; }
 .check-list { display: grid; gap: 19px; padding: 5px 0 20px; margin: 0; list-style: none; }
 .check-list li { display: flex; gap: 10px; align-items: flex-start; color: var(--subtext); font-size: 11px; line-height: 1.4; }

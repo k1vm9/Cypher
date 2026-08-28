@@ -34,7 +34,7 @@ function normalizeEvent(event, currentUserID) {
   if (!event || !event.threadID || (!event.body && event.type !== "message")) return null;
   return {
     id: String(event.messageID || `live_${Date.now()}`),
-    sender: String(event.senderID || "Messenger user"),
+    sender: String(event.senderName || event.senderID || "Messenger user"),
     content: String(event.body || ""),
     time: new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
     status: event.senderID === currentUserID ? "Sent" : "Received",
@@ -52,7 +52,7 @@ class MessengerRuntime {
     this.api = null;
     this.listener = null;
     this.currentUserID = "";
-    this.status = "no-session";
+    this.status = fs.existsSync(this.appStatePath) ? "stored" : "no-session";
     this.error = "";
     this.connectedAt = null;
     this.startPromise = null;

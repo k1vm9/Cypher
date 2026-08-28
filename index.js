@@ -14,10 +14,12 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const { URL } = require("url");
+const { MessengerRuntime } = require("./messenger-runtime");
 
 const ROOT = __dirname;
 const CONFIG_PATH = path.join(ROOT, "config.json");
 const DASHBOARD_STATE_PATH = path.join(ROOT, ".cypher-dashboard-state.json");
+const APPSTATE_PATH = path.join(ROOT, "appstate.json");
 const COMMAND_DIR = path.join(ROOT, "modules", "commands");
 const VEIL_COMMAND_DIR = path.join(ROOT, "Veil2.0-main", "src", "commands");
 const PORT = Number(process.env.PORT) || 2006;
@@ -30,6 +32,7 @@ const sessions = new Map();
 const sseClients = new Set();
 const loginAttempts = new Map();
 const csrfFailures = new Map();
+let messengerRuntime;
 
 const veilProtectionNames = [
   ["stealth", "Stealth presence", "Reduce unnecessary presence signals", true],
@@ -54,25 +57,21 @@ const veilProtectionNames = [
 ];
 
 const state = {
-  status: "online",
-  latency: 42,
+  status: "no-session",
+  latency: null,
   version: "1.2.14",
   startedAt: processStartedAt,
   botLocked: false,
   stats: {
-    messages: 248,
-    commands: 36,
-    groups: 18,
-    users: 1240,
-    totalCommands: 1842,
+    messages: 0,
+    commands: 0,
+    groups: 0,
+    users: 0,
+    totalCommands: 0,
     ram: "—",
   },
   messages: [],
-  logs: [
-    { time: "10:46:02", level: "INFO", text: "Connection heartbeat received", meta: "latency=42ms" },
-    { time: "10:45:51", level: "OK", text: "Protection layer check complete", meta: "layers=19" },
-    { time: "10:45:27", level: "INFO", text: "Veil capability catalog loaded", meta: "commands=98" },
-  ],
+  logs: [],
   settings: {
     botName: "Cypher",
     prefix: "!",
@@ -85,35 +84,14 @@ const state = {
     activationMode: "whitelist",
   },
   protections: Object.fromEntries(veilProtectionNames.map(([id, , , enabled]) => [id, enabled])),
-  schedules: [{
-    id: "automatic-message",
-    threadID: "thread_8841",
-    message: "Daily operations check-in: all systems are healthy.",
-    min: 30,
-    max: 60,
-    enabled: true,
-  }],
+  schedules: [],
   admins: {
     owner: [String(readConfig().YASSIN || "")].filter((id) => /^[0-9]{4,32}$/.test(id)),
     super: (Array.isArray(readConfig().FACEBOOK_ADMIN) ? readConfig().FACEBOOK_ADMIN : [readConfig().FACEBOOK_ADMIN]).map(String).filter((id) => /^[0-9]{4,32}$/.test(id)),
     admin: (Array.isArray(readConfig().ADMINBOT) ? readConfig().ADMINBOT : [readConfig().ADMINBOT]).map(String).filter((id) => /^[0-9]{4,32}$/.test(id)),
   },
-  threads: [
-    { id: "thread_8841", name: "Nightwatch Ops", type: "group", members: 12, unread: 2 },
-    { id: "thread_9204", name: "Design Systems", type: "group", members: 8, unread: 0 },
-    { id: "thread_1920", name: "AI Lab / prompts", type: "group", members: 6, unread: 0 },
-    { id: "thread_4402", name: "Ops Control", type: "group", members: 10, unread: 0 },
-  ],
-  threadMessages: {
-    thread_8841: [
-      { id: "seed_1", sender: "Jordan M.", content: "Can Cypher summarize the overnight queue?", time: "10:42 AM", kind: "incoming" },
-      { id: "seed_2", sender: "Cypher", content: "Absolutely. There are 3 items awaiting review and no critical alerts.", time: "10:42 AM", kind: "bot" },
-      { id: "seed_3", sender: "Rina K.", content: "Perfect, thank you.", time: "10:44 AM", kind: "incoming" },
-    ],
-    thread_9204: [
-      { id: "seed_4", sender: "Alex Stone", content: "New token set is live.", time: "10:24 AM", kind: "incoming" },
-    ],
-  },
+  threads: [],
+  threadMessages: {},
 };
 
 function readConfig() {
@@ -142,14 +120,6 @@ function loadDashboardState() {
         }
       }
     }
-    if (Array.isArray(saved.messages)) state.messages = saved.messages.slice(0, 100);
-    if (saved.threadMessages && typeof saved.threadMessages === "object") {
-      for (const thread of state.threads) {
-        if (Array.isArray(saved.threadMessages[thread.id])) {
-          state.threadMessages[thread.id] = saved.threadMessages[thread.id].slice(-100);
-        }
-      }
-    }
   } catch {
     // A missing or incomplete dashboard state is expected on first launch.
   }
@@ -161,8 +131,6 @@ function persistDashboardState() {
     protections: state.protections,
     schedules: state.schedules,
     admins: state.admins,
-    messages: state.messages.slice(0, 100),
-    threadMessages: state.threadMessages,
   };
   const temporaryPath = `${DASHBOARD_STATE_PATH}.tmp`;
   try {
@@ -176,19 +144,11 @@ function persistDashboardState() {
 
 loadDashboardState();
 
-if (!state.messages.length) {
-  state.messages = Object.values(state.threadMessages).flat().map((message) => ({
-    id: message.id,
-    sender: message.sender,
-    content: message.content,
-    time: message.time,
-    status: "Processed",
-    threadID: Object.entries(state.threadMessages).find(([, messages]) => messages.includes(message))?.[0] || "thread_8841",
-  })).slice(0, 100);
-}
-
 function publicState() {
-  const uptimeSeconds = Math.max(0, Math.floor((Date.now() - state.startedAt) / 1000));
+  const messenger = messengerRuntime?.snapshot();
+  const uptimeSeconds = messenger?.connected && messenger.connectedAt
+    ? Math.max(0, Math.floor((Date.now() - messenger.connectedAt) / 1000))
+    : 0;
   const activeProtections = Object.values(state.protections).filter(Boolean).length;
   const ram = `${Math.round(process.memoryUsage().rss / 1024 / 1024)} MB`;
   return {
@@ -201,8 +161,11 @@ function publicState() {
     botLocked: state.botLocked,
     stats: {
       ...state.stats,
-      commands: getCommandCatalog().filter((item) => item.enabled).length,
+       messages: state.messages.length,
+       commands: getCommandCatalog().filter((item) => item.enabled).length,
       groups: state.threads.length,
+       users: state.threads.reduce((count, thread) => count + Number(thread.members || 0), 0),
+       totalCommands: getCommandCatalog().length,
       uptime: formatUptime(uptimeSeconds),
       protections: activeProtections,
       ram,
@@ -212,8 +175,17 @@ function publicState() {
     protectionCount: veilProtectionNames.length,
     activeProtectionCount: activeProtections,
     schedules: state.schedules.map((item) => ({ ...item })),
+    threads: state.threads.map((item) => ({ ...item })),
     messages: state.messages.slice(0, 100),
     logs: state.logs.slice(0, 100),
+    messenger: messenger || {
+      status: state.status,
+      connected: false,
+      hasSession: false,
+      userID: null,
+      connectedAt: null,
+      error: null,
+    },
   };
 }
 
@@ -485,6 +457,109 @@ function updateSettings(input) {
   }
 }
 
+function clearLiveData() {
+  state.threads = [];
+  state.threadMessages = {};
+  state.messages = [];
+}
+
+function applyMessengerSnapshot(snapshot, announce = false) {
+  state.status = snapshot?.status || "no-session";
+  state.latency = snapshot?.connected ? state.latency : null;
+  if (!snapshot?.connected) clearLiveData();
+  if (announce) broadcast("state-update", publicState());
+}
+
+function recordLiveMessage(message) {
+  if (!message?.threadID || !message.content) return;
+  if (!findThread(message.threadID)) {
+    state.threads.unshift({
+      id: message.threadID,
+      name: `Conversation ${message.threadID}`,
+      type: "group",
+      members: 0,
+      unread: 0,
+    });
+  }
+  const messages = state.threadMessages[message.threadID] || [];
+  const duplicate = messages.some((item) => item.id === message.id
+    || (item.content === message.content && item.kind === "bot" && message.kind === "bot"));
+  if (duplicate) return;
+  state.threadMessages[message.threadID] = [...messages, message].slice(-100);
+  state.messages.unshift({
+    ...message,
+    status: message.status || "Received",
+  });
+  state.messages = state.messages.slice(0, 100);
+  addLog("INFO", "New Messenger message received", `thread=${message.threadID}`);
+  broadcast("message", message);
+  mutateAndBroadcast();
+}
+
+async function refreshLiveThreads() {
+  if (!messengerRuntime || !messengerRuntime.snapshot().connected) {
+    clearLiveData();
+    return [];
+  }
+  const startedAt = Date.now();
+  const threads = await messengerRuntime.getThreads();
+  state.threads = threads;
+  const validIds = new Set(threads.map((thread) => thread.id));
+  for (const id of Object.keys(state.threadMessages)) {
+    if (!validIds.has(id)) delete state.threadMessages[id];
+  }
+  state.messages = Object.values(state.threadMessages).flat().slice(-100).reverse();
+  state.latency = Math.max(1, Date.now() - startedAt);
+  return threads;
+}
+
+function parseSessionPayload(payload) {
+  let parsed;
+  try {
+    parsed = JSON.parse(String(payload || ""));
+  } catch {
+    throw new Error("Session payload must be valid JSON.");
+  }
+  const cookies = Array.isArray(parsed) ? parsed : parsed && Array.isArray(parsed.cookies) ? parsed.cookies : null;
+  if (!cookies?.length) throw new Error("Session payload must contain a non-empty cookie array.");
+  const normalized = cookies.map((cookie) => {
+    if (!cookie || typeof cookie !== "object") throw new Error("Every session cookie must be an object.");
+    const key = String(cookie.key || cookie.name || "").trim();
+    const value = String(cookie.value ?? "").trim();
+    if (!key || !value) throw new Error("Every session cookie needs a key and value.");
+    return {
+      key: key.slice(0, 120),
+      value: value.slice(0, 4096),
+      domain: String(cookie.domain || ".facebook.com").slice(0, 200),
+      path: String(cookie.path || "/").slice(0, 200),
+      hostOnly: Boolean(cookie.hostOnly),
+      httpOnly: Boolean(cookie.httpOnly),
+      secure: cookie.secure !== false,
+      session: Boolean(cookie.session),
+      ...(Number.isFinite(Number(cookie.expirationDate)) ? { expirationDate: Number(cookie.expirationDate) } : {}),
+    };
+  });
+  return normalized;
+}
+
+function writeAppState(cookies) {
+  const temporaryPath = `${APPSTATE_PATH}.tmp`;
+  fs.writeFileSync(temporaryPath, JSON.stringify(cookies, null, 2), { encoding: "utf8", mode: 0o600 });
+  fs.chmodSync(temporaryPath, 0o600);
+  fs.renameSync(temporaryPath, APPSTATE_PATH);
+}
+
+messengerRuntime = new MessengerRuntime({
+  appStatePath: APPSTATE_PATH,
+  onStatus: (snapshot) => {
+    applyMessengerSnapshot(snapshot, true);
+  },
+  onMessage: recordLiveMessage,
+  onLog: addLog,
+});
+state.status = messengerRuntime.snapshot().status;
+addLog("INFO", "Cypher dashboard started", `session=${messengerRuntime.snapshot().hasSession ? "stored" : "none"}`);
+
 async function handleApi(request, response, requestUrl) {
   const { pathname, searchParams } = requestUrl;
 
@@ -528,6 +603,63 @@ async function handleApi(request, response, requestUrl) {
     const session = requireAuth(request, response);
     if (!session) return true;
     sendJson(response, 200, { csrf: session.csrf });
+    return true;
+  }
+
+  if (pathname === "/api/session" && request.method === "GET") {
+    if (!requireAuth(request, response)) return true;
+    sendJson(response, 200, { ok: true, session: messengerRuntime.snapshot() });
+    return true;
+  }
+
+  if (pathname === "/api/session/import" && request.method === "POST") {
+    if (!requireMutation(request, response)) return true;
+    let body;
+    try { body = await readJson(request); } catch (error) {
+      sendJson(response, 400, { error: error.message });
+      return true;
+    }
+    try {
+      const cookies = parseSessionPayload(body.payload);
+      await messengerRuntime.stop();
+      writeAppState(cookies);
+      const session = await messengerRuntime.start(cookies);
+      addLog(session.connected ? "OK" : "WARN", "Messenger session imported", `cookies=${cookies.length}`);
+      mutateAndBroadcast();
+      sendJson(response, 200, { ok: true, session, state: publicState() });
+    } catch (error) {
+      sendJson(response, 422, { error: error.message });
+    }
+    return true;
+  }
+
+  if (pathname === "/api/session" && request.method === "DELETE") {
+    if (!requireMutation(request, response)) return true;
+    await messengerRuntime.stop();
+    try {
+      fs.rmSync(APPSTATE_PATH, { force: true });
+      fs.rmSync(`${APPSTATE_PATH}.tmp`, { force: true });
+    } catch (error) {
+      sendJson(response, 500, { error: `Unable to clear session: ${error.message}` });
+      return true;
+    }
+    applyMessengerSnapshot(messengerRuntime.snapshot());
+    addLog("WARN", "Messenger session cleared", "storage=local");
+    mutateAndBroadcast();
+    sendJson(response, 200, { ok: true, session: messengerRuntime.snapshot(), state: publicState() });
+    return true;
+  }
+
+  if (pathname === "/api/session/connect" && request.method === "POST") {
+    if (!requireMutation(request, response)) return true;
+    const session = await messengerRuntime.start();
+    if (session.connected) {
+      try { await refreshLiveThreads(); } catch (error) {
+        addLog("WARN", "Conversation sync failed", "request=getThreadList");
+      }
+    }
+    mutateAndBroadcast();
+    sendJson(response, 200, { ok: true, session, state: publicState() });
     return true;
   }
 
@@ -587,6 +719,12 @@ async function handleApi(request, response, requestUrl) {
 
   if (pathname === "/api/threads" && request.method === "GET") {
     if (!requireAuth(request, response)) return true;
+    try {
+      await refreshLiveThreads();
+    } catch (error) {
+      sendJson(response, 502, { error: `Unable to load Messenger conversations: ${error.message}` });
+      return true;
+    }
     sendJson(response, 200, { ok: true, threads: state.threads.map(({ id, name, type, members, unread }) => ({ id, name, type, members, unread })) });
     return true;
   }
@@ -642,6 +780,16 @@ async function handleApi(request, response, requestUrl) {
       sendJson(response, 404, { error: "Thread not found." });
       return true;
     }
+    if (messengerRuntime.snapshot().connected) {
+      try {
+        const messages = await messengerRuntime.getMessages(threadID);
+        state.threadMessages[threadID] = messages;
+        state.messages = Object.values(state.threadMessages).flat().slice(-100).reverse();
+      } catch (error) {
+        sendJson(response, 502, { error: `Unable to load conversation history: ${error.message}` });
+        return true;
+      }
+    }
     sendJson(response, 200, { ok: true, messages: state.threadMessages[threadID] || [] });
     return true;
   }
@@ -673,27 +821,43 @@ async function handleApi(request, response, requestUrl) {
     }
     const action = String(body.action || "").slice(0, 40);
     if (action === "restart") {
-      state.status = "connecting";
       addLog("INFO", "Restart requested from dashboard");
-      setTimeout(() => {
-        state.status = "online";
-        state.startedAt = Date.now();
-        addLog("OK", "Cypher instance reconnected");
-        mutateAndBroadcast();
-      }, 450);
+      await messengerRuntime.stop();
+      await messengerRuntime.start();
+      if (messengerRuntime.snapshot().connected) {
+        try { await refreshLiveThreads(); } catch (error) {
+          addLog("WARN", "Conversation sync failed after restart", "request=getThreadList");
+        }
+      }
     } else if (action === "stop") {
-      state.status = "offline";
-      addLog("WARN", "Cypher instance stopped from dashboard");
+      await messengerRuntime.stop();
     } else if (action === "start") {
-      state.status = "online";
-      state.startedAt = Date.now();
-      addLog("OK", "Cypher instance started");
+      await messengerRuntime.start();
+      if (messengerRuntime.snapshot().connected) {
+        try { await refreshLiveThreads(); } catch (error) {
+          addLog("WARN", "Conversation sync failed after start", "request=getThreadList");
+        }
+      }
     } else if (action === "ping") {
-      state.latency = 35 + crypto.randomInt(0, 15);
-      addLog("OK", "Connection ping completed", `latency=${state.latency}ms`);
+      if (!messengerRuntime.snapshot().connected) {
+        sendJson(response, 409, { error: "Connect a valid Messenger session before pinging." });
+        return true;
+      }
+      try {
+        await refreshLiveThreads();
+        addLog("OK", "Connection ping completed", `latency=${state.latency}ms`);
+      } catch (error) {
+        sendJson(response, 502, { error: `Messenger ping failed: ${error.message}` });
+        return true;
+      }
     } else if (action === "refresh") {
-      state.stats.messages += 1;
-      addLog("INFO", "Telemetry refreshed", "source=dashboard");
+      try {
+        const threads = await refreshLiveThreads();
+        addLog("INFO", "Telemetry refreshed", `threads=${threads.length}`);
+      } catch (error) {
+        sendJson(response, 502, { error: `Messenger refresh failed: ${error.message}` });
+        return true;
+      }
     } else if (action === "clear-logs") {
       state.logs = [];
       addLog("OK", "Log stream cleared");
@@ -743,20 +907,6 @@ async function handleApi(request, response, requestUrl) {
         else state.schedules.push(schedule);
       }
       addLog("OK", "Configuration saved", "source=dashboard");
-    } else if (action === "import") {
-      const payload = String(body.payload || "");
-      if (!payload || payload.length > 200_000) {
-        sendJson(response, 422, { error: "Paste a session payload before importing." });
-        return true;
-      }
-      try {
-        const parsed = JSON.parse(payload);
-        if (!Array.isArray(parsed) && (!parsed || typeof parsed !== "object")) throw new Error();
-        addLog("OK", "Session payload validated", "storage=local");
-      } catch {
-        sendJson(response, 422, { error: "Session payload must be valid JSON." });
-        return true;
-      }
     } else {
       addLog("INFO", "Dashboard action received", `action=${action || "unknown"}`);
     }
@@ -778,17 +928,26 @@ async function handleApi(request, response, requestUrl) {
       sendJson(response, 422, { error: "Message cannot be empty." });
       return true;
     }
+    if (!messengerRuntime.snapshot().connected) {
+      sendJson(response, 409, { error: "Connect a valid Messenger session before sending messages." });
+      return true;
+    }
     if (!findThread(threadID)) {
       sendJson(response, 404, { error: "Thread not found." });
       return true;
     }
-    const item = { id: `msg_${Date.now()}`, sender: "You", content: message, time: new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }), status: "Queued", threadID };
+    try {
+      await messengerRuntime.sendMessage(threadID, message);
+    } catch (error) {
+      sendJson(response, 502, { error: `Unable to send Messenger message: ${error.message}` });
+      return true;
+    }
+    const item = { id: `sent_${Date.now()}`, sender: "You", content: message, time: new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }), status: "Sent", threadID, kind: "bot" };
     state.messages.unshift(item);
     state.threadMessages[threadID] = state.threadMessages[threadID] || [];
-    state.threadMessages[threadID].push({ ...item, kind: "incoming" });
+    state.threadMessages[threadID].push(item);
     state.threadMessages[threadID] = state.threadMessages[threadID].slice(-100);
-    state.stats.messages += 1;
-    addLog("OK", `Message queued for ${findThread(threadID).name}`, `thread=${threadID}`);
+    addLog("OK", `Message sent to ${findThread(threadID).name}`, `thread=${threadID}`);
     broadcast("message", item);
     mutateAndBroadcast();
     sendJson(response, 201, { ok: true, message: item, state: publicState() });
@@ -944,7 +1103,7 @@ async function handleApi(request, response, requestUrl) {
 
   if (pathname === "/api/files/tree" && request.method === "GET") {
     if (!requireAuth(request, response)) return true;
-    const skip = new Set([".git", "node_modules", ".cache", "android", "build", "dist", "attached_assets"]);
+    const skip = new Set([".git", "node_modules", ".cache", "android", "build", "dist", "attached_assets", "appstate.json", path.basename(DASHBOARD_STATE_PATH)]);
     function walk(directory, depth = 0) {
       if (depth > 3) return [];
       let entries;
